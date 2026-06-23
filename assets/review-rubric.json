@@ -1,0 +1,22 @@
+{
+  "_note": "Default organization rubric used only when no teacher rubric is supplied. It does not predict the teacher's final grade.",
+  "version": "1.0.0",
+  "dimensions": [
+    {"id": "completeness", "label": "完成度", "weight": 18},
+    {"id": "requirement_alignment", "label": "任务匹配度", "weight": 18},
+    {"id": "technical_correctness", "label": "技术正确性", "weight": 20},
+    {"id": "reproducibility", "label": "可复现性", "weight": 12},
+    {"id": "evidence_and_screenshots", "label": "证据与截图", "weight": 12},
+    {"id": "results_and_analysis", "label": "结果与分析", "weight": 10},
+    {"id": "conclusion_support", "label": "结论支撑", "weight": 5},
+    {"id": "writing_and_format", "label": "写作与规范", "weight": 5}
+  ],
+  "statuses": ["通过", "需关注", "严重问题", "无法验证"],
+  "submission_readiness": ["尚未完成", "需要较大修改", "小修后可提交", "可以提交"],
+  "rules": {
+    "teacher_rubric_overrides_default": true,
+    "do_not_score_unverifiable_content_as_correct": true,
+    "state_confidence_and_assumptions": true,
+    "allow_ready_without_forced_suggestions": true
+  }
+}

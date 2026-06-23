@@ -1,0 +1,2 @@
+# PyMuPDF is used only for local PDF text, image, and page rendering.
+PyMuPDF>=1.24,<2.0
