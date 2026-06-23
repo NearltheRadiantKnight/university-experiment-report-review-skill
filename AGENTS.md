@@ -2,15 +2,15 @@
 
 ## Purpose
 
-Analyze university laboratory-report files and screenshots locally. Classify each report as blank, partial, or completed; guide blank templates; review completed work for completeness, requirement alignment, technical correctness, reproducibility, evidence, screenshot quality, analysis, conclusions, and writing; and state clearly when it is ready to submit.
+Analyze university laboratory-report files and screenshots locally. Classify each report as blank, partial, or completed; guide blank templates; review completed work; generate a style-preserving annotated DOCX from the uploaded original; open a local dashboard; and provide downloads.
 
 ## Activation
 
-Use for explicit `/university-experiment-report-review-skill` invocations and requests involving 实验报告、空白模板、怎么做实验、怎么写、检查报告、完成度、匹配度、正确性、截图、运行结果、修改建议 or 能不能提交. Do not activate for unrelated general education or writing questions.
+Use for explicit `/university-experiment-report-review-skill` invocations and experiment-report requests involving blank templates, execution guidance, completed-report review, screenshots, downloadable DOCX generation, local frontend display, original font preservation, or colored revisions. Do not activate for unrelated education or general writing questions.
 
 ## Usage
 
-Read `SKILL.md` in this directory completely before reviewing a report. Treat teacher rubrics and experiment instructions as authoritative. Use `scripts/inspect_report.py` only to prepare local document text and images; the current Codex model must perform the semantic and visual review itself. Never call an external model API or remote OCR service.
+Read `SKILL.md` completely. Treat teacher rubrics and experiment instructions as authoritative. Use `scripts/inspect_report.py` to prepare text and images. After semantic review, write a plan matching `assets/generation-plan.schema.json`, then run `scripts/run_pipeline.py` once to generate the DOCX and open the local download page. Never call an external model API or remote OCR service.
 
 ## Required Behavior
 
@@ -19,11 +19,16 @@ Read `SKILL.md` in this directory completely before reviewing a report. Treat te
 - Never fabricate execution, results, commands, data, screenshots, citations, or requirements.
 - Give actionable, located revisions; say “可以提交” when no material issue remains.
 - Keep student documents local and avoid repeating sensitive credentials.
+- Preserve original DOCX runs and styles; add only clearly marked colored Codex content.
+- Use `execution` for blank templates and `revision` for partial or completed reports.
 
 ## Files
 
 - `SKILL.md`: complete workflow and output contract.
-- `scripts/inspect_report.py`: local text/image preparation.
-- `references/`: detailed review, screenshot, and output methodology.
-- `assets/review-rubric.json`: default rubric used only when no teacher rubric exists.
+- `scripts/inspect_report.py`: local text and image preparation.
+- `scripts/build_report.py`: style-preserving DOCX annotation engine.
+- `scripts/run_pipeline.py`: one-command generation and dashboard delivery.
+- `scripts/dashboard_server.py`: loopback-only frontend and downloads.
+- `assets/generation-plan.schema.json`: contract for Codex-authored changes.
+- `references/generated-document-workflow.md`: generation methodology and boundaries.
 - `evals/`: regression criteria and representative cases.

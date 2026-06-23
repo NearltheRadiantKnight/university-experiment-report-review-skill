@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>实验报告生成中心</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">LOCAL CODEX WORKSPACE</p>
+        <h1>实验报告生成中心</h1>
+        <p class="hero-copy">查看并下载 Codex 基于原始 DOCX 生成的实验执行报告或修改报告。文档处理与页面服务仅在本机运行。</p>
+      </div>
+      <div class="privacy-badge"><span></span>无外部模型 API</div>
+    </header>
+
+    <main>
+      <section class="workflow-strip" aria-label="工作流程">
+        <div><strong>01</strong><span>在 Codex 上传 DOCX</span></div>
+        <div><strong>02</strong><span>Codex 分析并生成计划</span></div>
+        <div><strong>03</strong><span>保留原样式并插入异色内容</span></div>
+        <div><strong>04</strong><span>在此下载生成文件</span></div>
+      </section>
+
+      <section class="latest-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">LATEST OUTPUT</p>
+            <h2>最新生成结果</h2>
+          </div>
+          <button id="refreshButton" type="button">刷新</button>
+        </div>
+        <div id="latestReport" class="latest-report loading">正在读取本地生成记录…</div>
+      </section>
+
+      <section class="legend-card">
+        <div>
+          <h2>颜色说明</h2>
+          <p>原文继续使用原来的字体与颜色；只有 Codex 新增内容带有标记和分类颜色。</p>
+        </div>
+        <div class="legend-items">
+          <span><i class="blue"></i>执行指导 / 修改建议</span>
+          <span><i class="red"></i>发现问题</span>
+          <span><i class="green"></i>参考写法</span>
+          <span><i class="purple"></i>写作建议 / 优点</span>
+        </div>
+      </section>
+
+      <section class="history-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">LOCAL HISTORY</p>
+            <h2>本地生成记录</h2>
+          </div>
+          <p id="recordCount" class="record-count"></p>
+        </div>
+        <div id="reportList" class="report-list"></div>
+      </section>
+    </main>
+
+    <footer>University Experiment Report Review Skill · 本机环回地址 127.0.0.1</footer>
+  </div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

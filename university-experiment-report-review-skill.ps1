@@ -10,5 +10,5 @@ if (-not $Python) {
     exit 1
 }
 
-& $Python.Source (Join-Path $ScriptDir "scripts\inspect_report.py") @args
+& $Python.Source (Join-Path $ScriptDir "scripts\run_pipeline.py") @args
 exit $LASTEXITCODE

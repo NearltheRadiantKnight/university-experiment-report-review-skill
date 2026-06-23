@@ -1,64 +1,26 @@
 # University Experiment Report Review Skill Eval
 
-These checks define whether the skill performs an evidence-based local review. Semantic criteria are intentionally `llm-judge` because classification, technical reasoning, screenshot interpretation, and feedback usefulness require model judgment. The bundled runner validates the contract and prints these checks as a review checklist.
+This contract covers evidence-based review, style-preserving document generation, and local dashboard delivery. Semantic checks remain `llm-judge`; deterministic formatting and download behavior are covered by the Python test suite.
 
 ```json
 {
   "skill": "university-experiment-report-review-skill",
   "criteria": [
-    {
-      "id": "evidence-based-state-classification",
-      "text": "The output classifies the report as blank, partial, or completed and cites observable evidence rather than relying only on length or filename.",
-      "type": "llm-judge"
-    },
-    {
-      "id": "actionable-blank-guidance",
-      "text": "For a blank template, the output gives an executable experiment and writing plan with evidence-capture checkpoints and does not fabricate commands, measurements, or results.",
-      "type": "llm-judge"
-    },
-    {
-      "id": "complete-finished-review",
-      "text": "For partial or completed work, the output covers completeness, requirement alignment, technical correctness, reproducibility, evidence/screenshots, analysis, conclusions, and writing as applicable.",
-      "type": "llm-judge"
-    },
-    {
-      "id": "located-revision-actions",
-      "text": "Every material issue includes a location or evidence reference, its impact, a concrete revision action, and a completion or verification condition.",
-      "type": "llm-judge"
-    },
-    {
-      "id": "honest-visual-claims",
-      "text": "Screenshot findings distinguish directly visible content, contextual inference, and unreadable or unverifiable content, without treating OCR or captions as visual proof.",
-      "type": "llm-judge"
-    },
-    {
-      "id": "honest-submission-decision",
-      "text": "The output prioritizes blockers, states uncertainty, avoids forced criticism, and clearly says the report can be submitted when no material issue remains.",
-      "type": "llm-judge"
-    }
+    {"id": "state-classification", "text": "The output classifies the report as blank, partial, or completed and cites observable evidence.", "type": "llm-judge"},
+    {"id": "honest-guidance", "text": "Blank-template guidance is executable and does not fabricate commands, measurements, screenshots, or results.", "type": "llm-judge"},
+    {"id": "complete-review", "text": "Partial or completed work is reviewed for completeness, alignment, correctness, reproducibility, evidence, analysis, conclusion support, and writing as applicable.", "type": "llm-judge"},
+    {"id": "honest-visual-claims", "text": "Screenshot findings distinguish visible content, inference, and unreadable content.", "type": "llm-judge"},
+    {"id": "correct-report-kind", "text": "A blank DOCX produces an execution plan/report and a partial or completed DOCX produces a revision plan/report.", "type": "llm-judge"},
+    {"id": "source-based-generation", "text": "The generated report is based on the uploaded original document rather than an unrelated replacement document.", "type": "llm-judge"},
+    {"id": "style-differentiation", "text": "Original content retains its formatting while every Codex addition is clearly labeled and visually differentiated by font color.", "type": "llm-judge"},
+    {"id": "download-delivery", "text": "The response provides the generated file path and local dashboard URL, and the dashboard offers a DOCX download.", "type": "llm-judge"},
+    {"id": "local-only-boundary", "text": "No external model API, remote OCR, cloud upload, or public network listener is introduced.", "type": "llm-judge"},
+    {"id": "submission-decision", "text": "The output prioritizes blockers and clearly says when the report can be submitted without forced criticism.", "type": "llm-judge"}
   ],
   "golden": [
-    {
-      "id": "blank-template",
-      "input": "golden/blank-template/input.md",
-      "expected": null,
-      "split": "val",
-      "expected_status": "pending-first-green"
-    },
-    {
-      "id": "partial-unreadable-screenshot",
-      "input": "golden/partial-unreadable-screenshot/input.md",
-      "expected": null,
-      "split": "val",
-      "expected_status": "pending-first-green"
-    },
-    {
-      "id": "strong-completed-report",
-      "input": "golden/strong-completed-report/input.md",
-      "expected": null,
-      "split": "val",
-      "expected_status": "pending-first-green"
-    }
+    {"id": "blank-template", "input": "golden/blank-template/input.md", "expected": null, "split": "val", "expected_status": "pending-first-green"},
+    {"id": "partial-unreadable-screenshot", "input": "golden/partial-unreadable-screenshot/input.md", "expected": null, "split": "val", "expected_status": "pending-first-green"},
+    {"id": "strong-completed-report", "input": "golden/strong-completed-report/input.md", "expected": null, "split": "val", "expected_status": "pending-first-green"}
   ]
 }
 ```

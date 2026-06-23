@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Codex Experiment Report Generation Plan",
+  "type": "object",
+  "required": ["report_kind", "source_state", "summary", "verdict", "additions"],
+  "properties": {
+    "report_kind": {"enum": ["execution", "revision"]},
+    "source_state": {"enum": ["blank", "partial", "completed"]},
+    "summary": {"type": "string"},
+    "verdict": {"type": "string"},
+    "additions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text", "category"],
+        "properties": {
+          "anchor_text": {"type": "string"},
+          "paragraph_index": {"type": "integer", "minimum": 0},
+          "occurrence": {"type": "integer", "minimum": 1, "default": 1},
+          "position": {"enum": ["after", "append"], "default": "after"},
+          "category": {
+            "enum": ["guidance", "evidence", "writing", "warning", "issue", "suggestion", "example", "praise", "summary"]
+          },
+          "label": {"type": "string"},
+          "text": {"type": "string", "minLength": 1},
+          "font_name": {"type": "string", "default": "Microsoft YaHei"},
+          "font_size_pt": {"type": "number", "minimum": 8, "maximum": 30, "default": 10.5}
+        },
+        "oneOf": [
+          {"required": ["anchor_text"]},
+          {"required": ["paragraph_index"]},
+          {"properties": {"position": {"const": "append"}}, "required": ["position"]}
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

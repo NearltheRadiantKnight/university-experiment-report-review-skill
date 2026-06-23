@@ -1,0 +1,22 @@
+{
+  "report_kind": "execution",
+  "source_state": "blank",
+  "summary": "该模板尚未填写。新增内容用于指导真实执行、截图留证和章节写作，不包含虚构结果。",
+  "verdict": "尚未完成：请按蓝色与青色提示执行实验，并用真实结果替换模板占位内容。",
+  "additions": [
+    {
+      "anchor_text": "实验步骤",
+      "position": "after",
+      "category": "guidance",
+      "label": "执行顺序",
+      "text": "先确认实验环境和任务参数，再按任务书逐项执行。每一步记录实际命令、参数、现象和异常。"
+    },
+    {
+      "anchor_text": "实验结果",
+      "position": "after",
+      "category": "evidence",
+      "label": "截图要求",
+      "text": "在关键配置完成后和最终验证时分别截图，确保命令、目标对象、关键参数与完整结果可读。"
+    }
+  ]
+}

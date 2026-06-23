@@ -1,2 +1,4 @@
-# PyMuPDF is used only for local PDF text, image, and page rendering.
+# Local document and dashboard dependencies. No package calls a model API.
 PyMuPDF>=1.24,<2.0
+python-docx>=1.1,<2.0
+Flask>=3.0,<4.0
