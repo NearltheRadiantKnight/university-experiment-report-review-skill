@@ -155,6 +155,21 @@ footer { padding: 24px 0 40px; border-top: 1px solid rgba(23, 50, 77, .16); colo
 .render-preview { margin: 28px 0 0; padding: 16px; border-radius: 16px; background: #eef2f4; }
 .render-preview img { display: block; width: 100%; max-height: 760px; object-fit: contain; border-radius: 10px; background: white; }
 .render-preview figcaption { margin-top: 9px; color: var(--muted); font-size: 12px; }
+.companion-content { margin-top: 28px; padding: 20px; border-radius: 16px; background: #f4f6f7; }
+.companion-title { margin: 0 0 16px; color: var(--navy); font-size: 18px; font-weight: 800; }
+.companion-verdict { margin-bottom: 6px; padding-left: 12px; border-left: 4px solid var(--accent); color: var(--navy); font-weight: 700; font-size: 14px; }
+.companion-summary { margin-bottom: 16px; padding-left: 12px; border-left: 4px solid var(--blue); color: var(--muted); font-size: 13px; line-height: 1.6; }
+.companion-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.companion-table th { padding: 8px 10px; background: var(--navy); color: #fff; font-weight: 700; text-align: left; white-space: nowrap; }
+.companion-table th:first-child { border-radius: 8px 0 0 0; }
+.companion-table th:last-child { border-radius: 0 8px 0 0; }
+.companion-table td { padding: 8px 10px; border-bottom: 1px solid #dfe4e7; vertical-align: top; line-height: 1.5; }
+.companion-table tbody tr:last-child td:first-child { border-radius: 0 0 0 8px; }
+.companion-table tbody tr:last-child td:last-child { border-radius: 0 0 8px 0; }
+.companion-priority-blocker { background: #fdf2f2; }
+.companion-priority-high { background: #fef7ee; }
+.companion-priority-medium { background: #f4f8fc; }
+.companion-priority-low, .companion-priority-optional { background: #f5faf3; }
 .feedback-panel { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--line); }
 .feedback-title h3 { margin: 0; color: var(--navy); font-size: 20px; }
 .feedback-help { color: var(--muted); line-height: 1.65; }

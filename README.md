@@ -96,7 +96,3 @@ python scripts/agent_compat.py --platform all
 python scripts/validate_plan.py assets/execution-plan.example.json
 python scripts/validate_plan.py assets/revision-plan.example.json
 ```
-
-## License
-
-MIT

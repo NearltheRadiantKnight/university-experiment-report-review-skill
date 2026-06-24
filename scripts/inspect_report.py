@@ -23,13 +23,6 @@ VERSION = "1.3.2"
 SUPPORTED_SUFFIXES = {
     ".docx",
     ".pdf",
-    ".txt",
-    ".md",
-    ".png",
-    ".jpg",
-    ".jpeg",
-    ".bmp",
-    ".webp",
 }
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff"}
 

@@ -20,7 +20,7 @@ The server has no upload or model endpoint and only downloads files registered b
 
 ## Style Preservation
 
-The original DOCX is never overwritten. Existing runs, fonts, colors, images, tables, and paragraph styles are not reset. New runs carry a `Codex 新增` label, an explicit font, and a category color. Editable style preservation is promised only for DOCX; PDF remains an analysis input unless locally converted first.
+The original DOCX is never overwritten. Existing runs, fonts, colors, images, tables, and paragraph styles are not reset. New runs carry a `新增` label, an explicit font, and a category color. Editable style preservation is promised only for DOCX; PDF remains an analysis input unless locally converted first.
 
 ## Interactive Boundary
 

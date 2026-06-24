@@ -1,46 +1,280 @@
 # university-experiment-report-review-skill
 
-## Purpose
+## Purpose（技能用途）
 
-Analyze university laboratory-report files and screenshots locally. Classify each report as blank, partial, or completed; guide blank templates; review completed work; generate structured DOCX deliverables from the original; run quality gates; open a local dashboard; and provide annotated-report, action-checklist, and quality-report downloads across AgentSkills-compatible agents, with local domain routing, render-state QA, and feedback continuation.
+本技能用于在本地分析高校实验报告文件和截图。
 
-## Activation
+支持：
 
-Use for explicit `/university-experiment-report-review-skill` invocations and experiment-report requests involving blank templates, execution guidance, completed-report review, screenshots, downloadable DOCX generation, local frontend display, original font preservation, or colored revisions. Do not activate for unrelated education or general writing questions.
+* 判断实验报告状态（空白模板 / 部分完成 / 已完成）
+* 指导填写空白实验报告
+* 审核已完成实验报告
+* 基于原始文档生成结构化 DOCX
+* 执行质量检查（QA）
+* 启动本地 Dashboard
+* 提供批注版报告、修改清单和质量报告下载
 
-## Usage
+适用于 Claude Code、Codex、OpenClaw 等 AgentSkills 兼容环境。
 
-Read `SKILL.md` completely. Treat teacher rubrics and experiment instructions as authoritative. Use `scripts/inspect_report.py` to prepare text, image contexts, and the contact sheet. After semantic review, write a structured plan matching `assets/generation-plan.schema.json`, validate it, then run `scripts/run_pipeline.py` once to generate the DOCX and open the local download page. Never call an external model API or remote OCR service.
+---
 
-## Required Behavior
+## Activation（激活条件）
 
-- Read all supplied files before judging.
-- Inspect important screenshots visually and separate observed, inferred, and unreadable content.
-- Never fabricate execution, results, commands, data, screenshots, citations, or requirements.
-- Give actionable, located revisions; say “可以提交” when no material issue remains.
-- Keep student documents local and avoid repeating sensitive credentials.
-- Preserve original DOCX runs and styles; add only clearly marked colored Codex content.
-- Use `execution` for blank templates and `revision` for partial or completed reports.
+以下情况应激活本技能：
 
-## Files
+* 用户显式调用 `/university-experiment-report-review-skill`
+* 用户要求分析实验报告
+* 用户上传实验报告 DOCX/PDF
+* 用户上传实验报告截图
+* 用户请求实验指导
+* 用户请求实验报告审阅
+* 用户要求生成修订版 DOCX
+* 用户要求保留原始格式
+* 用户要求生成批注或修改建议
 
-- `SKILL.md`: complete workflow and output contract.
-- `scripts/inspect_report.py`: local text, image, contact-sheet, and domain-routing preparation.
-- `scripts/domain_router.py`: selects one of five local domain profiles.
-- `scripts/qa_report.py`: structural QA plus optional DOCX render QA.
-- `scripts/agent_compat.py`: Codex, Claude Code, and OpenClaw contract/runtime smoke checks.
-- `scripts/build_report.py`: style-preserving DOCX annotation engine.
-- `scripts/run_pipeline.py`: one-command generation and dashboard delivery.
-- `scripts/dashboard_server.py`: loopback-only frontend and downloads.
-- `assets/generation-plan.schema.json`: contract for Codex-authored changes.
-- `references/generated-document-workflow.md`: generation methodology and boundaries.
-- `evals/`: regression criteria and representative cases.
+以下情况不要激活：
 
-## Cross-Agent Paths
+* 普通课程答疑
+* 一般写作任务
+* 与实验报告无关的教育类问题
 
-- Claude Code: `~/.claude/skills/university-experiment-report-review-skill`
-- Codex and universal AgentSkills: `~/.agents/skills/university-experiment-report-review-skill`
-- OpenClaw shared: `~/.openclaw/skills/university-experiment-report-review-skill`
-- OpenClaw workspace: `<workspace>/skills/university-experiment-report-review-skill`
+---
 
-OpenClaw loads higher-precedence workspace skills before shared managed skills. Use a new session after changing eligibility or allowlists.
+## Usage（使用流程）
+
+1. 完整阅读 `SKILL.md`
+2. 将教师评分标准（Rubric）和实验要求视为最高优先级依据
+3. 运行：
+
+```bash
+scripts/inspect_report.py
+```
+
+用于提取：
+
+* 文本内容
+* 图片内容
+* Contact Sheet
+* 实验领域信息
+
+4. 完成语义分析后：
+
+* 生成符合 `assets/generation-plan.schema.json` 的 Generation Plan
+* 执行 Schema 校验
+
+5. 校验通过后仅执行一次：
+
+```bash
+scripts/run_pipeline.py
+```
+
+6. 自动完成：
+
+* DOCX 生成
+* QA 检查
+* Dashboard 启动
+* 下载页面展示
+
+禁止：
+
+* 调用外部 LLM API
+* 调用远程 OCR 服务
+* 上传学生文件到第三方平台
+
+---
+
+## Required Behavior（必须遵守的行为）
+
+### File Review（文件审查）
+
+* 必须读取所有用户提供的文件
+* 必须检查关键截图
+* 区分：
+
+  * Observed（直接观察到）
+  * Inferred（推断得到）
+  * Unreadable（无法识别）
+
+### Accuracy（真实性要求）
+
+严禁伪造：
+
+* 实验过程
+* 实验结果
+* 命令执行记录
+* 测试数据
+* 截图内容
+* 引用来源
+* 实验要求
+
+### Review Output（审阅输出）
+
+必须提供：
+
+* 具体修改位置
+* 问题原因
+* 修改建议
+
+当不存在实质性问题时，明确输出：
+
+> 可以提交
+
+### Privacy（隐私保护）
+
+* 所有学生文档仅允许本地处理
+* 不重复输出敏感凭据
+* 不泄露认证信息
+
+### DOCX Generation（DOCX 生成）
+
+必须：
+
+* 保留原始段落结构
+* 保留原始 Run
+* 保留原始样式
+
+仅允许新增：
+
+* 明确标识的 AI 修改内容
+* 彩色修订标注
+
+### Mode Selection（模式选择）
+
+根据报告状态自动选择：
+
+| 状态               | 模式        |
+| ---------------- | --------- |
+| Blank Template   | execution |
+| Partial Report   | revision  |
+| Completed Report | revision  |
+
+---
+
+## Files（文件说明）
+
+### Core Documents
+
+#### `SKILL.md`
+
+完整工作流说明和输出契约定义。
+
+---
+
+### Scripts
+
+#### `scripts/inspect_report.py`
+
+负责：
+
+* 文本提取
+* 图片分析
+* Contact Sheet 生成
+* Domain Routing 准备
+
+#### `scripts/domain_router.py`
+
+自动识别实验所属领域。
+
+#### `scripts/qa_report.py`
+
+执行：
+
+* 结构检查
+* 内容检查
+* DOCX 渲染检查（可选）
+
+#### `scripts/agent_compat.py`
+
+执行：
+
+* Claude Code 兼容性检查
+* Codex 兼容性检查
+* OpenClaw 兼容性检查
+
+#### `scripts/build_report.py`
+
+保留样式的 DOCX 批注生成器。
+
+#### `scripts/run_pipeline.py`
+
+一键执行完整流程。
+
+#### `scripts/dashboard_server.py`
+
+启动仅本地可访问的 Dashboard。
+
+---
+
+### Assets
+
+#### `assets/generation-plan.schema.json`
+
+Generation Plan 的标准 Schema。
+
+---
+
+### References
+
+#### `references/generated-document-workflow.md`
+
+描述：
+
+* 文档生成流程
+* 修改边界
+* 风险控制原则
+
+---
+
+### Evals
+
+#### `evals/`
+
+包含：
+
+* 回归测试
+* 典型案例
+* 验收标准
+
+---
+
+## Cross-Agent Paths（跨 Agent 安装路径）
+
+### Claude Code
+
+```text
+~/.claude/skills/university-experiment-report-review-skill
+```
+
+### Codex / AgentSkills
+
+```text
+~/.agents/skills/university-experiment-report-review-skill
+```
+
+### OpenClaw Shared Skill
+
+```text
+~/.openclaw/skills/university-experiment-report-review-skill
+```
+
+### OpenClaw Workspace Skill
+
+```text
+<workspace>/skills/university-experiment-report-review-skill
+```
+
+---
+
+## OpenClaw Skill Priority（OpenClaw 加载优先级）
+
+加载顺序：
+
+1. Workspace Skills
+2. Shared Skills
+
+同名技能时：
+
+* Workspace Skill 覆盖 Shared Skill
+
+修改 Activation、Allowlist 或配置后，建议开启新的 Session 以确保配置重新加载。
+0

@@ -1,7 +1,6 @@
 ---
 name: university-experiment-report-review-skill
 description: Review blank, partial, or completed university experiment reports; inspect text and screenshots locally; generate domain-adapted structured execution guidance or evidence-based revisions; preserve original DOCX formatting; and deliver annotated reports, action checklists, quality metadata, and a loopback dashboard. Supports Codex, Claude Code, OpenClaw, and other AgentSkills-compatible agents. Triggers on 实验报告、空白模板、完成度、截图、修改建议、怎么做、怎么写、生成 DOCX、前端页面.
-license: MIT
 compatibility: AgentSkills-compatible; tested contracts for Codex CLI, Claude Code, and OpenClaw.
 user-invocable: true
 activation: /university-experiment-report-review-skill
@@ -26,7 +25,7 @@ metadata: {"author":"Codex","version":"1.3.2","created":"2026-06-23","last_revie
 
 ## Prerequisites
 
-- 输入可为 `.docx`、`.pdf`、`.txt`、`.md`、`.png`、`.jpg`、`.jpeg`、`.bmp` 或 `.webp`。
+- 输入可为 `.docx`、`.pdf`。
 - 旧版 `.doc` 应先在本地转换为 `.docx` 或 `.pdf`。
 - 文档和图片只在本机处理；不需要 API key，不需要网络。
 - PDF 本地提取脚本需要 PyMuPDF；若不可用，优先使用当前 Codex 环境自带的 PDF/图片查看能力。
@@ -132,7 +131,7 @@ python scripts/domain_router.py --input "<准备目录>/document.txt"
 - 初始/空白模板使用 `report_kind: execution`，生成“实验执行报告”。新增内容应指导真实执行、截图留证和章节写作，不能填入虚构结果。
 - 部分完成或已完成报告使用 `report_kind: revision`，生成“修改报告”。保留原文，在相关位置后插入问题、建议、示例或优点。
 - 优先用原文标题或稳定段落作为 `anchor_text`；无法定位时使用 `position: append`。
-- 不重设原文字体、字号、颜色或段落样式；新增内容必须带“Codex 新增”标签和分类颜色。
+- 不重设原文字体、字号、颜色或段落样式；新增内容必须带“新增”标签和分类颜色。
 
 把计划保存为本地 UTF-8 JSON 后，只运行一个交付命令：
 
@@ -220,7 +219,7 @@ ot-installed`; only `passed` is a real CLI smoke pass. Never report Claude Code 
 
 空白模板应把“修改方案”改为“实验执行与写作方案”。如果报告已经足够好，最优先处理可写“无必须修改项”，然后给出最多三项可选润色。
 
-完成文档生成后，还应在回复末尾给出：生成文件绝对路径、报告类型、领域选择及置信度、结构质量状态、页面渲染状态、Dashboard 本地 URL、反馈 JSON 用法、原文样式保留说明，以及“新增内容用异色字体并带 Codex 标签”的说明。
+完成文档生成后，还应在回复末尾给出：生成文件绝对路径、报告类型、领域选择及置信度、结构质量状态、页面渲染状态、Dashboard 本地 URL、反馈 JSON 用法、原文样式保留说明，以及“新增内容用异色字体并带标签”的说明。
 ## Failure Handling
 
 - 文档无法打开：说明格式或权限问题，建议在本地另存为 `.docx` 或 `.pdf`，不要猜测内容。
