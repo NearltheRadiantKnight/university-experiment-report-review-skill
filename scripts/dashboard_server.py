@@ -8,6 +8,7 @@ from typing import Any
 from flask import Flask,abort,jsonify,render_template,request,send_file
 ROOT=Path(__file__).resolve().parents[1]; TEMPLATE_DIR=ROOT/"assets"/"dashboard"/"templates"; STATIC_DIR=ROOT/"assets"/"dashboard"/"static"
 DASHBOARD_API_VERSION=2
+PRIORITY_LABELS={"blocker":"阻塞","high":"高","medium":"中","low":"低","optional":"可选"}
 
 def _output_dir_id(output_dir:Path)->str:
  return hashlib.sha256(str(output_dir.resolve()).casefold().encode("utf-8")).hexdigest()[:16]
@@ -54,9 +55,19 @@ def _resolve_file(output_dir:Path,job_id:str,kind:str)->tuple[dict[str,Any],Path
 
 def _feedback_path(output_dir:Path,job_id:str)->Path: return output_dir/f"{job_id}.feedback.json"
 
+def _feedback_records(output_dir:Path)->list[dict[str,Any]]:
+ records=[]
+ if not output_dir.is_dir(): return records
+ for path in sorted(output_dir.glob("*.feedback.json"),reverse=True):
+  try: data=json.loads(path.read_text(encoding="utf-8"))
+  except (OSError,json.JSONDecodeError): continue
+  if not isinstance(data,dict): continue
+  records.append(data)
+ return records
+
 def _default_feedback(metadata:dict[str,Any])->dict[str,Any]:
  actions=[]
- for index,action in enumerate(metadata.get("actions",[]),1): actions.append({"action_id":index,"label":str(action.get("label",f"行动 {index}")),"priority":str(action.get("priority","medium")),"status":"open","note":"","correction":""})
+ for index,action in enumerate(metadata.get("actions",[]),1): actions.append({"action_id":index,"label":str(action.get("label",f"行动 {index}")),"priority":str(action.get("priority","medium")),"priority_label":str(action.get("priority_label",PRIORITY_LABELS.get(str(action.get("priority","medium")),"中"))),"status":"open","note":"","correction":""})
  return {"job_id":metadata["job_id"],"source_name":metadata.get("source_name"),"updated_at":None,"confirmed_context":{},"actions":actions}
 
 def _load_feedback(output_dir:Path,metadata:dict[str,Any])->dict[str,Any]:
@@ -77,7 +88,7 @@ def _validate_feedback(payload:Any,metadata:dict[str,Any])->dict[str,Any]:
   if status not in {"open","done","skipped","needs-review"}: abort(400,"Invalid action status.")
   note=str(item.get("note","")).strip(); correction=str(item.get("correction","")).strip()
   if len(note)>1000 or len(correction)>2000: abort(400,"Feedback text is too long.")
-  actions.append({"action_id":int(item.get("action_id",len(actions)+1)),"label":str(item.get("label",""))[:160],"priority":str(item.get("priority","medium"))[:20],"status":status,"note":note,"correction":correction})
+  actions.append({"action_id":int(item.get("action_id",len(actions)+1)),"label":str(item.get("label",""))[:160],"priority":str(item.get("priority","medium"))[:20],"priority_label":str(item.get("priority_label","")),"status":status,"note":note,"correction":correction})
  context=payload.get("confirmed_context",{})
  if not isinstance(context,dict) or len(context)>30: abort(400,"Invalid confirmed_context.")
  clean_context={str(key)[:80]:str(value)[:1000] for key,value in context.items()}
@@ -91,6 +102,8 @@ def create_app(output_dir:Path)->Flask:
  def health()->Any: return jsonify({"ok":True,"service":"university-experiment-report-dashboard","api_version":DASHBOARD_API_VERSION,"output_dir_id":_output_dir_id(resolved),"local_only":True,"external_model_api":False})
  @app.get("/api/reports")
  def reports()->Any: return jsonify({"reports":_metadata_records(resolved)})
+ @app.get("/api/feedback")
+ def feedback_list()->Any: return jsonify({"feedback":_feedback_records(resolved)})
  @app.get("/api/reports/<job_id>/metadata")
  def report_metadata(job_id:str)->Any: return jsonify(_load_metadata(resolved,job_id))
  @app.get("/api/reports/<job_id>/download")
@@ -108,6 +121,12 @@ def create_app(output_dir:Path)->Flask:
   files=metadata.setdefault("generated_files",[])
   if not any(item.get("kind")=="feedback" for item in files): files.append({"kind":"feedback","label":"反馈 JSON","name":path.name})
   _save_metadata(resolved,metadata); return jsonify({"ok":True,"feedback":feedback,"download_url":f"/api/reports/{job_id}/download/feedback"})
+ @app.put("/api/reports/<job_id>/feedback")
+ def replace_feedback(job_id:str)->Any:
+  metadata=_load_metadata(resolved,job_id); feedback=_validate_feedback(request.get_json(silent=True),metadata); path=_feedback_path(resolved,job_id); temp=path.with_suffix(".tmp"); temp.write_text(json.dumps(feedback,ensure_ascii=False,indent=2),encoding="utf-8"); temp.replace(path)
+  files=metadata.setdefault("generated_files",[])
+  if not any(item.get("kind")=="feedback" for item in files): files.append({"kind":"feedback","label":"反馈 JSON","name":path.name})
+  _save_metadata(resolved,metadata); return jsonify({"ok":True,"feedback":feedback})
  return app
 
 def main()->int:
