@@ -12,7 +12,7 @@
 * 基于原始文档生成结构化 DOCX
 * 执行质量检查（QA）
 * 启动本地 Dashboard
-* 提供批注版报告、修改清单和质量报告下载
+* 提供一份整合批注 DOCX，并在渐进式 Dashboard 中展示必要信息
 
 适用于 Claude Code、Codex、OpenClaw 等 AgentSkills 兼容环境。
 
@@ -67,6 +67,10 @@ scripts/inspect_report.py
 ```bash
 scripts/run_pipeline.py
 ```
+
+正常交付不得添加 `--no-dashboard` 或 `--no-open`。必须返回 Dashboard URL；若浏览器没有自动打开，读取输出目录的 `dashboard-url.txt` 并把地址发给用户。
+
+Windows Codex Desktop 中不要自动尝试 Word COM，也不要调用会触发 `codex-windows-sandbox-setup.exe` 的本地图片查看辅助程序。Word COM 仅在用户明确同意后通过 `--allow-word-com` 启用；截图默认通过本地 Dashboard 查看。
 
 6. 自动完成：
 
@@ -278,3 +282,10 @@ Generation Plan 的标准 Schema。
 
 修改 Activation、Allowlist 或配置后，建议开启新的 Session 以确保配置重新加载。
 0
+## v1.4 Delivery Contract
+
+Before generation, confirm one of `15m`, `1h`, `half_day`, or `full`; use `full` only for non-interactive fallback. Produce one user-facing annotated DOCX with a consolidated review appendix. Treat local quality JSON and render assets as machine data. The dashboard defaults to a traffic-light verdict, no more than five budgeted actions, screenshot evidence cards, and the main DOCX download; deeper checks remain collapsed. Review `manifest.json.review_signals` as candidates and visually verify false-completion, contamination, and screenshot retake findings.
+
+## Feedback Improvement Queue
+
+Current and historical feedback are editable local records. When a dashboard request points to `skill-improvement-queue`, claim it with `scripts/skill_improvement_queue.py`, use agent-skill-creator only for reusable evidence-backed defects, run every release gate, then mark the request complete or failed. Read `generation-preferences.json` before generation and confirm time budget, review depth, review focus, and output mode with the user.

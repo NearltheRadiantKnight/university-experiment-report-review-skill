@@ -22,3 +22,10 @@ On a later turn:
 2. Treat confirmed context as user evidence.
 3. Re-check only affected findings and any dependencies.
 4. Produce a new immutable job; never overwrite the old report or metadata.
+## Dashboard CRUD and local-agent improvement
+
+Current feedback stays inline. Historical feedback opens in a modal. Both editors can change statuses and corrections, remove individual actions, delete the whole feedback record, and save through loopback-only endpoints.
+
+The “用反馈改进 Skill” button creates a local `skill-improvement-queue` request and prompt. It does not call a remote API or let browser JavaScript edit source files. A local AgentSkills-compatible agent claims the request, invokes agent-skill-creator, filters out report-specific corrections, validates reusable changes, installs them locally, and records completion.
+
+Generation preferences are stored in `generation-preferences.json`; the Agent reads them and still confirms them in conversation. Render status is one of `not-run`, `passed`, `permission-required`, `unavailable`, or `failed`, with retry and preview behavior defined in SKILL.md.

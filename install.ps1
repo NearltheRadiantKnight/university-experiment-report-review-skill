@@ -25,7 +25,7 @@ $ErrorActionPreference = "Stop"
 # Constants
 # ---------------------------------------------------------------------------
 $SkillName = "university-experiment-report-review-skill"
-$Version = "1.3.2"
+$Version = "1.5.2"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $HomeDir = $env:USERPROFILE
 
@@ -605,6 +605,8 @@ function Install-Files {
         $_.Name -ne "install.sh" -and
         $_.Name -ne "install.ps1" -and
         $_.Name -ne ".git" -and
+        $_.Name -ne ".pytest_cache" -and
+        $_.Name -ne "__pycache__" -and
         $_.Name -ne "." -and
         $_.Name -ne ".."
     }

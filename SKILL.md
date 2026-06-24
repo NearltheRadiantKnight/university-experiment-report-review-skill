@@ -1,11 +1,12 @@
 ---
 name: university-experiment-report-review-skill
 description: Review blank, partial, or completed university experiment reports; inspect text and screenshots locally; generate domain-adapted structured execution guidance or evidence-based revisions; preserve original DOCX formatting; and deliver annotated reports, action checklists, quality metadata, and a loopback dashboard. Supports Codex, Claude Code, OpenClaw, and other AgentSkills-compatible agents. Triggers on 实验报告、空白模板、完成度、截图、修改建议、怎么做、怎么写、生成 DOCX、前端页面.
+license: MIT
 compatibility: AgentSkills-compatible; tested contracts for Codex CLI, Claude Code, and OpenClaw.
 user-invocable: true
 activation: /university-experiment-report-review-skill
-provenance: {"maintainer":"Codex","version":"1.3.2","created":"2026-06-23","source_references":["User workflow description","OpenClaw official skills documentation"]}
-metadata: {"author":"Codex","version":"1.3.2","created":"2026-06-23","last_reviewed":"2026-06-23","review_interval_days":90,"openclaw":{"emoji":"🧪","requires":{"bins":["python"]}}}
+provenance: {"maintainer":"Codex","version":"1.5.2","created":"2026-06-23","source_references":["User workflow description","OpenClaw official skills documentation"]}
+metadata: {"author":"Codex","version":"1.5.2","created":"2026-06-23","last_reviewed":"2026-06-23","review_interval_days":90,"openclaw":{"emoji":"🧪","requires":{"bins":["python"]}}}
 ---
 # /university-experiment-report-review-skill — 大学生实验报告指导与审阅
 
@@ -124,6 +125,18 @@ python scripts/domain_router.py --input "<准备目录>/document.txt"
 
 只有在用户提供明确评分标准时才给出严格分数。没有评分标准时，以维度状态和提交准备度为主；如给出估计分数，必须注明是通用标准下的非正式估计和置信度。
 
+### 6.5 生成前确认框架
+
+在写 Generation Plan 前，Agent 与 Dashboard 都应提供并确认四项设置：
+
+- `time_budget`: `15m`、`1h`、`half_day` 或 `full`。
+- `review_depth`: `quick`、`standard` 或 `deep`。
+- `review_focus`: `comprehensive`、`screenshots`、`correctness` 或 `writing`。
+- `output_mode`: `single_docx` 或 `guidance_only`。
+
+如果输出目录存在 `generation-preferences.json`，先读取它，再在对话中向用户简短确认；用户在当前对话中的明确要求优先。非交互环境使用 `full + standard + comprehensive + single_docx`。预算模式最多保留五项影响最大的动作，并为每项填写 `estimated_minutes`。`guidance_only` 只返回执行/修改计划，不运行 DOCX 流水线。
+
+同时确定红绿灯提交状态：`green` 表示可以提交，`yellow` 表示小修后提交，`red` 表示证据或核心任务不足。检查 `manifest.json` 中的 `review_signals`，但只能把它视为候选信号；当前 Agent 必须结合全文和实际截图复核伪完成、占位符、AI 对话痕迹、重复章节和敏感信息。
 ### 7. 生成可下载文档
 
 完成分析后，必须基于原始 DOCX 生成结构化计划，格式遵循 `assets/generation-plan.schema.json`：
@@ -140,7 +153,11 @@ python scripts/run_pipeline.py --source "<原始报告.docx>" --plan "<generatio
 # 必须通过页面渲染时追加 --require-render；自动化测试可用 --no-dashboard
 ```
 
-流水线先校验计划，再生成彩色批注版 DOCX、独立行动清单和质量报告；随后尝试外部渲染器、LibreOffice 或 Windows Word COM，并将状态记录为 passed、failed 或 unavailable，登记元数据，启动 `127.0.0.1:8765` 本地页面并打开浏览器。页面展示提交判断、优先级、质量状态和多文件下载。不得覆盖原始 DOCX。
+正常交付禁止添加 `--no-dashboard` 或 `--no-open`：流水线应启动工作台、尝试打开浏览器，并把固定可复制地址写入输出目录的 `dashboard-url.txt`。只有自动化测试、CI 或用户明确要求不启动网页时才可关闭 Dashboard。即使浏览器未自动打开，也必须把 `dashboard_url` 和 `dashboard-url.txt` 的地址回复给用户。
+
+Windows Codex Desktop 默认禁止探测 Word COM，也不要调用会启动 `codex-windows-sandbox-setup.exe` 的本地图片查看辅助程序。页面渲染优先使用显式配置的本地渲染器或 LibreOffice；只有用户明确同意时才使用 `--allow-word-com`。截图通过 Dashboard 的登记图片接口展示；若当前 Agent 无法在不触发沙箱弹窗的情况下实际查看，应标记为“当前无法辨认”并请用户在网页中确认，不得猜测。
+
+流水线先校验计划，再生成一份保留原格式的彩色批注 DOCX；红绿灯、预算内行动、伪完成、污染检查、截图重拍指令和自动质量检查统一写入文末综合附录。质量 JSON、渲染 PDF 和预览图只作为本地机器数据，不进入普通下载区。随后启动 `127.0.0.1:8765` 渐进式工作台并打开浏览器。不得覆盖原始 DOCX。
 
 详细合同见 [references/generated-document-workflow.md](references/generated-document-workflow.md)。
 ## Cross-Agent Contract
@@ -157,18 +174,36 @@ This skill uses the AgentSkills `SKILL.md` standard and a companion `AGENTS.md`.
 Before generation, the plan must pass `scripts/validate_plan.py`:
 
 - No numeric score unless the user requested one or a teacher rubric was provided; `scoring_basis` is then mandatory.
+- `time_budget` defaults to `full`; constrained budgets may include at most five highest-impact actions and may not exceed their minute limit.
+- `review_depth`, `review_focus`, and `output_mode` must match the confirmed generation framework.
+- `submission_signal` must be green, yellow, or red and agree with the evidence and verdict.
+- `false_completion_findings`, `contamination_findings`, and `screenshot_evidence` need locations, observed evidence, and concrete fixes.
 - A paragraph block may not exceed 420 characters; use `bullets`, `checklist`, or `table` for structured material.
-- Anchors are strict by default. Missing anchors fail generation instead of creating an accidental “unlocated content” section.
-- Explicit appendix content is allowed and must use a meaningful `appendix_title`.
-- Each addition should declare `priority` and `evidence_basis` so the dashboard can expose blockers and trace claims.
-- Do not repeat the same summary both inline and in a generated appendix. `include_summary_appendix` defaults to false.
+- Anchors are strict by default. Missing anchors fail generation instead of creating an accidental unlocated section.
+- Each addition should declare `priority`, `estimated_minutes`, and `evidence_basis`.
 
-Structured additions use `block_type: paragraph | bullets | checklist | table`. Prefer checklists for execution steps and screenshots, and tables for requirement-evidence maps, test cases, or issue lists.
+Structured additions use `block_type: paragraph | bullets | checklist | table`.
 ## Feedback Continuation
 
-Dashboard feedback is a local JSON workflow, not a model API. Users may mark actions `done`, `open`, `skipped`, or
-eeds-review`, add corrections, and confirm environment facts. On the next turn, treat `<job_id>.feedback.json` as higher-priority user evidence, re-check affected findings, and generate a new plan rather than editing old metadata in place.
+Dashboard feedback is local JSON, not a model API. Current feedback remains inline; current and historical records support `open`, `done`, `skipped`, and `needs-review`, plus editing, action deletion, full-record deletion, and saving.
 
+When the user clicks “用反馈改进 Skill”, the Dashboard writes a `skill-improvement-queue/*.skill-improvement.json` request. A local AgentSkills session must:
+
+1. Claim the task with `python scripts/skill_improvement_queue.py --queue-dir "<queue>" --claim-next <agent>`.
+2. Read all feedback evidence and separate report-specific corrections from reusable skill defects.
+3. Use `agent-skill-creator` only for reusable, evidence-supported improvements.
+4. Run tests, spec validation, security scan, pipeline checks, and cross-agent checks before installation.
+5. Mark the task completed or failed with `skill_improvement_queue.py`; never silently self-modify or push without validation.
+
+Report-specific feedback still creates a new immutable report job rather than overwriting an old report.
+
+## Render Status Contract
+
+- `not-run`: gray; offer “开始渲染”. It means no render result exists, not that the DOCX is broken.
+- `passed`: green; expose the registered local preview.
+- `permission-required`: yellow; Word exists but the sandbox cannot access desktop COM; offer retry in a host session.
+- `unavailable`: yellow; no renderer completed; the DOCX remains downloadable unless render was required.
+- `failed`: red; show the error and offer retry.
 ## Cross-Agent Smoke Test
 
 Before release or installation changes, run:

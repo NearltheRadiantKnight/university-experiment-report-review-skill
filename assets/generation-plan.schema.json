@@ -1,52 +1,463 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Experiment Report Generation Plan v2",
+  "title": "Experiment Report Generation Plan v3",
   "type": "object",
-  "required": ["report_kind", "source_state", "summary", "verdict", "additions"],
+  "required": [
+    "report_kind",
+    "source_state",
+    "summary",
+    "verdict",
+    "additions"
+  ],
   "properties": {
-    "report_kind": {"enum": ["execution", "revision"]},
-    "source_state": {"enum": ["blank", "partial", "completed"]},
-    "summary": {"type": "string", "maxLength": 1200},
-    "domain_profile": {"type": ["string", "null"], "enum": ["software-testing", "networking", "database", "os-programming", "physical-science", null]},
-    "domain_confidence": {"enum": ["high", "medium", "low"]},
-    "domain_profile_basis": {"type": "string", "maxLength": 500},
-    "verdict": {"type": "string", "maxLength": 500},
-    "rubric_provided": {"type": "boolean", "default": false},
-    "score_requested": {"type": "boolean", "default": false},
-    "scoring_basis": {"type": "string", "maxLength": 500},
-    "strict_anchors": {"type": "boolean", "default": true},
-    "include_summary_appendix": {"type": "boolean", "default": false},
-    "generate_companion": {"type": "boolean", "default": true},
-    "appendix_title": {"type": "string", "default": "行动清单", "maxLength": 80},
+    "report_kind": {
+      "enum": [
+        "execution",
+        "revision"
+      ]
+    },
+    "source_state": {
+      "enum": [
+        "blank",
+        "partial",
+        "completed"
+      ]
+    },
+    "time_budget": {
+      "enum": [
+        "15m",
+        "1h",
+        "half_day",
+        "full"
+      ],
+      "default": "full"
+    },
+    "review_depth": {
+      "enum": [
+        "quick",
+        "standard",
+        "deep"
+      ],
+      "default": "standard"
+    },
+    "review_focus": {
+      "enum": [
+        "comprehensive",
+        "screenshots",
+        "correctness",
+        "writing"
+      ],
+      "default": "comprehensive"
+    },
+    "output_mode": {
+      "enum": [
+        "single_docx",
+        "guidance_only"
+      ],
+      "default": "single_docx"
+    },
+    "submission_signal": {
+      "enum": [
+        "green",
+        "yellow",
+        "red"
+      ]
+    },
+    "estimated_minutes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1440
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 1200
+    },
+    "domain_profile": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "software-testing",
+        "networking",
+        "database",
+        "os-programming",
+        "physical-science",
+        null
+      ]
+    },
+    "domain_confidence": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "domain_profile_basis": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "verdict": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "rubric_provided": {
+      "type": "boolean",
+      "default": false
+    },
+    "score_requested": {
+      "type": "boolean",
+      "default": false
+    },
+    "scoring_basis": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "strict_anchors": {
+      "type": "boolean",
+      "default": true
+    },
+    "include_summary_appendix": {
+      "type": "boolean",
+      "default": false
+    },
+    "generate_companion": {
+      "type": "boolean",
+      "default": false,
+      "deprecated": true
+    },
+    "appendix_title": {
+      "type": "string",
+      "default": "Codex 综合审阅附录",
+      "maxLength": 80
+    },
     "additions": {
-      "type": "array", "maxItems": 24,
+      "type": "array",
+      "maxItems": 24,
       "items": {
-        "type": "object", "required": ["category"],
+        "type": "object",
+        "required": [
+          "category"
+        ],
         "properties": {
-          "anchor_text": {"type": "string"}, "paragraph_index": {"type": "integer", "minimum": 0},
-          "occurrence": {"type": "integer", "minimum": 1, "default": 1},
-          "position": {"enum": ["after", "append"], "default": "after"},
-          "on_anchor_missing": {"enum": ["error", "appendix"], "default": "error"},
-          "category": {"enum": ["guidance", "evidence", "writing", "warning", "issue", "suggestion", "example", "praise", "summary"]},
-          "priority": {"enum": ["blocker", "high", "medium", "low", "optional"], "default": "medium"},
-          "evidence_basis": {"enum": ["teacher", "template", "text", "screenshot", "inference", "unverified"]},
-          "block_type": {"enum": ["paragraph", "bullets", "checklist", "table"], "default": "paragraph"},
-          "label": {"type": "string", "maxLength": 80}, "text": {"type": "string", "maxLength": 2000},
-          "items": {"type": "array", "minItems": 1, "maxItems": 30, "items": {"type": "string", "minLength": 1, "maxLength": 350}},
-          "columns": {"type": "array", "minItems": 1, "maxItems": 12, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
-          "rows": {"type": "array", "maxItems": 80, "items": {"type": "array", "items": {"type": ["string", "number", "boolean", "null"]}}},
-          "font_name": {"type": "string", "default": "Microsoft YaHei"},
-          "font_size_pt": {"type": "number", "minimum": 8, "maximum": 30, "default": 10.5}
+          "anchor_text": {
+            "type": "string"
+          },
+          "paragraph_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "occurrence": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "position": {
+            "enum": [
+              "after",
+              "append"
+            ],
+            "default": "after"
+          },
+          "on_anchor_missing": {
+            "enum": [
+              "error",
+              "appendix"
+            ],
+            "default": "error"
+          },
+          "category": {
+            "enum": [
+              "guidance",
+              "evidence",
+              "writing",
+              "warning",
+              "issue",
+              "suggestion",
+              "example",
+              "praise",
+              "summary"
+            ]
+          },
+          "priority": {
+            "enum": [
+              "blocker",
+              "high",
+              "medium",
+              "low",
+              "optional"
+            ],
+            "default": "medium"
+          },
+          "estimated_minutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 480
+          },
+          "evidence_basis": {
+            "enum": [
+              "teacher",
+              "template",
+              "text",
+              "screenshot",
+              "inference",
+              "unverified"
+            ]
+          },
+          "block_type": {
+            "enum": [
+              "paragraph",
+              "bullets",
+              "checklist",
+              "table"
+            ],
+            "default": "paragraph"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 30,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 350
+            }
+          },
+          "columns": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 12,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          },
+          "rows": {
+            "type": "array",
+            "maxItems": 80,
+            "items": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean",
+                  "null"
+                ]
+              }
+            }
+          },
+          "font_name": {
+            "type": "string",
+            "default": "Microsoft YaHei"
+          },
+          "font_size_pt": {
+            "type": "number",
+            "minimum": 8,
+            "maximum": 30,
+            "default": 10.5
+          }
         },
         "allOf": [
-          {"oneOf": [{"required": ["anchor_text"]}, {"required": ["paragraph_index"]}, {"properties": {"position": {"const": "append"}}, "required": ["position"]}]},
-          {"if": {"properties": {"block_type": {"const": "paragraph"}}}, "then": {"required": ["text"]}},
-          {"if": {"properties": {"block_type": {"enum": ["bullets", "checklist"]}}}, "then": {"required": ["items"]}},
-          {"if": {"properties": {"block_type": {"const": "table"}}}, "then": {"required": ["columns", "rows"]}}
+          {
+            "oneOf": [
+              {
+                "required": [
+                  "anchor_text"
+                ]
+              },
+              {
+                "required": [
+                  "paragraph_index"
+                ]
+              },
+              {
+                "properties": {
+                  "position": {
+                    "const": "append"
+                  }
+                },
+                "required": [
+                  "position"
+                ]
+              }
+            ]
+          },
+          {
+            "if": {
+              "properties": {
+                "block_type": {
+                  "const": "paragraph"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "text"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "block_type": {
+                  "enum": [
+                    "bullets",
+                    "checklist"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "items"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "block_type": {
+                  "const": "table"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "columns",
+                "rows"
+              ]
+            }
+          }
         ],
+        "additionalProperties": false
+      }
+    },
+    "false_completion_findings": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "contamination_findings": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "screenshot_evidence": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "required": [
+          "source_ref",
+          "claim",
+          "observed",
+          "readability",
+          "matches_text",
+          "privacy_risk",
+          "retake_instruction"
+        ],
+        "properties": {
+          "source_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "claim": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "observed": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "readability": {
+            "enum": [
+              "clear",
+              "partial",
+              "unreadable"
+            ]
+          },
+          "matches_text": {
+            "enum": [
+              "yes",
+              "partial",
+              "no",
+              "unknown"
+            ]
+          },
+          "privacy_risk": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "retake_instruction": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "image_path": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "embed_in_appendix": {
+            "type": "boolean",
+            "default": false
+          }
+        },
         "additionalProperties": false
       }
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "required": [
+        "location",
+        "issue",
+        "evidence",
+        "action",
+        "severity"
+      ],
+      "properties": {
+        "location": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "issue": {
+          "type": "string",
+          "maxLength": 800
+        },
+        "evidence": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "action": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "severity": {
+          "enum": [
+            "blocker",
+            "high",
+            "medium",
+            "low"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
 }

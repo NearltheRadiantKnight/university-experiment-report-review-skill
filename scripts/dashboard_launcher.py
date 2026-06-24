@@ -21,7 +21,8 @@ SERVER_SCRIPT = ROOT / "scripts" / "dashboard_server.py"
 
 
 SERVICE_NAME = "university-experiment-report-dashboard"
-API_VERSION = 2
+API_VERSION = 4
+ASSET_VERSION = "1.5.2"
 
 
 def _output_dir_id(output_dir: Path) -> str:
@@ -45,6 +46,7 @@ def _matching_dashboard(url: str, output_dir: Path) -> bool:
         health
         and health.get("service") == SERVICE_NAME
         and health.get("api_version") == API_VERSION
+        and health.get("asset_version") == ASSET_VERSION
         and health.get("output_dir_id") == _output_dir_id(output_dir)
     )
 
@@ -104,6 +106,7 @@ def launch_dashboard(output_dir: Path, port: int = 8765, open_browser: bool = Tr
 
     if open_browser:
         webbrowser.open(url, new=2)
+    (output_dir / "dashboard-url.txt").write_text(url + "\n", encoding="utf-8")
     return url
 
 

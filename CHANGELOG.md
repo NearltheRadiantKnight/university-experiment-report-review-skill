@@ -1,4 +1,34 @@
+## 1.5.0 - 2026-06-24
+
+- Restored editable and deletable current/history feedback workflows.
+- Added local AgentSkills improvement requests driven by saved feedback evidence.
+- Added Dashboard generation settings for budget, depth, focus, and output mode.
+- Added explicit render-state explanations, local preview, and retry actions.
+## 1.4.0 - 2026-06-24
+
+- Added time-budgeted rescue modes and green/yellow/red submission signals.
+- Consolidated user delivery into one annotated DOCX with review and automatic-QA appendices.
+- Added local false-completion, contamination, screenshot-dimension, and retake evidence signals.
+- Rebuilt the dashboard as a progressive workbench without background refresh or unsafe HTML insertion.
+- Added safe registered screenshot previews and kept machine JSON/render artifacts out of normal downloads.
 # Changelog
+
+## 1.5.2 - 2026-06-24
+
+- Audit all Dashboard buttons and align their UI behavior with local API routes.
+- Hide ineffective render retry when no renderer is installed.
+- Track unsaved state per feedback editor so saving one record does not clear another.
+- Make clipboard failures non-fatal after a Skill improvement task is queued.
+- Require saved feedback before creating a Skill improvement request and show the activation command in a modal.
+- Bump frontend asset version to prevent stale browser JavaScript.
+
+## 1.5.1 - 2026-06-24
+
+- Disable Microsoft Word COM rendering by default to prevent Windows sandbox and registry popups.
+- Add explicit `--allow-word-com` opt-in for host sessions that can safely render through Word.
+- Preserve the local Dashboard in normal delivery and write its URL to `dashboard-url.txt`.
+- Avoid Codex Desktop local-image helpers that trigger sandbox setup; use registered Dashboard screenshots instead.
+- Make QA tables compatible with localized Word templates that lack the `Table Grid` style.
 
 ## 1.3.2 - 2026-06-23
 
