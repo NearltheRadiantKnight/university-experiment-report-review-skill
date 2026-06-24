@@ -19,7 +19,7 @@ from typing import Any
 from xml.etree import ElementTree
 
 SKILL_NAME = "university-experiment-report-review-skill"
-VERSION = "1.0.0"
+VERSION = "1.3.2"
 SUPPORTED_SUFFIXES = {
     ".docx",
     ".pdf",
@@ -80,6 +80,67 @@ def _docx_text(xml_bytes: bytes) -> str:
     return "\n".join(paragraphs)
 
 
+def _docx_visual_contexts(input_path: Path) -> dict[str, list[dict[str, Any]]]:
+    """Map embedded media to nearby source paragraphs using DOCX relationships."""
+    try:
+        from docx import Document
+        from docx.oxml.ns import qn
+    except ImportError:
+        return {}
+    try:
+        with zipfile.ZipFile(input_path) as archive:
+            if "[Content_Types].xml" not in archive.namelist():
+                return {}
+        document = Document(str(input_path))
+    except Exception:
+        return {}
+    contexts: dict[str, list[dict[str, Any]]] = {}
+    for index, paragraph in enumerate(document.paragraphs):
+        nearby = " | ".join(
+            item.text.strip()
+            for item in document.paragraphs[max(0, index - 1): min(len(document.paragraphs), index + 2)]
+            if item.text.strip()
+        )
+        for blip in paragraph._p.xpath(".//a:blip"):
+            relationship_id = blip.get(qn("r:embed"))
+            if not relationship_id or relationship_id not in document.part.related_parts:
+                continue
+            part_name = str(document.part.related_parts[relationship_id].partname).lstrip("/")
+            contexts.setdefault(part_name, []).append({"paragraph_index": index, "nearby_text": nearby[:500]})
+    return contexts
+
+
+def _create_contact_sheet(output_dir: Path, visuals: list[dict[str, Any]], warnings: list[str]) -> str | None:
+    """Create a local thumbnail overview without OCR or network access."""
+    if not visuals:
+        return None
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:
+        warnings.append("Pillow is unavailable; contact sheet was not created.")
+        return None
+    tile_width, tile_height, columns = 520, 390, 2
+    rows = (len(visuals) + columns - 1) // columns
+    sheet = Image.new("RGB", (tile_width * columns, tile_height * rows), "white")
+    draw = ImageDraw.Draw(sheet)
+    font = ImageFont.load_default()
+    for index, visual in enumerate(visuals):
+        image_path = output_dir / str(visual["path"])
+        try:
+            with Image.open(image_path) as image:
+                image = image.convert("RGB")
+                image.thumbnail((tile_width - 30, tile_height - 55))
+                x = (index % columns) * tile_width + (tile_width - image.width) // 2
+                y = (index // columns) * tile_height + 28
+                sheet.paste(image, (x, y))
+        except Exception as exc:
+            warnings.append(f"Could not add {image_path.name} to contact sheet: {exc}")
+        label = f"{index + 1}. {Path(str(visual['path'])).name}"
+        draw.text(((index % columns) * tile_width + 12, (index // columns) * tile_height + 8), label, fill="#17324d", font=font)
+    overview = output_dir / "contact-sheet.jpg"
+    sheet.save(overview, quality=88)
+    return overview.relative_to(output_dir).as_posix()
+
 def _prepare_docx(input_path: Path, output_dir: Path) -> tuple[str, list[dict[str, Any]], list[str]]:
     images_dir = output_dir / "images"
     images_dir.mkdir(parents=True, exist_ok=True)
@@ -122,6 +183,9 @@ def _prepare_docx(input_path: Path, output_dir: Path) -> tuple[str, list[dict[st
     except zipfile.BadZipFile as exc:
         raise ReportPreparationError("The DOCX file is damaged or is not a valid DOCX archive.") from exc
 
+    contexts = _docx_visual_contexts(input_path)
+    for visual in visuals:
+        visual["contexts"] = contexts.get(str(visual.get("source", "")), [])
     if not text_sections:
         warnings.append("No extractable DOCX text was found; inspect the exported images and original document visually.")
     return "\n\n".join(text_sections), visuals, warnings
@@ -248,6 +312,13 @@ def prepare_report(input_path: Path, output_dir: Path, max_pages: int = 80) -> P
     else:
         text, visuals, warnings = _prepare_image(input_path, output_dir)
 
+    contact_sheet = _create_contact_sheet(output_dir, visuals, warnings)
+    try:
+        from domain_router import route_domain
+        domain_routing = route_domain(text)
+    except Exception as exc:
+        domain_routing = {"selected": None, "confidence": "low", "reason": f"Domain routing unavailable: {exc}"}
+        warnings.append(domain_routing["reason"])
     text_path = _write_text(text, output_dir)
     manifest = {
         "skill": SKILL_NAME,
@@ -263,6 +334,8 @@ def prepare_report(input_path: Path, output_dir: Path, max_pages: int = 80) -> P
         "text_characters": len(text),
         "visual_count": len(visuals),
         "visuals": visuals,
+        "visual_overview": contact_sheet,
+        "domain_routing": domain_routing,
         "warnings": warnings,
         "next_step": "Codex must read the text and visually inspect relevant images before classifying or reviewing the report.",
     }

@@ -12,7 +12,7 @@
       <div>
         <p class="eyebrow">LOCAL CODEX WORKSPACE</p>
         <h1>实验报告生成中心</h1>
-        <p class="hero-copy">查看并下载 Codex 基于原始 DOCX 生成的实验执行报告或修改报告。文档处理与页面服务仅在本机运行。</p>
+        <p class="hero-copy">查看审阅结论、优先行动和质量状态，并下载批注报告、行动清单与质量报告。支持 Codex、Claude Code、OpenClaw 等 AgentSkills 客户端。</p>
       </div>
       <div class="privacy-badge"><span></span>无外部模型 API</div>
     </header>
@@ -20,7 +20,7 @@
     <main>
       <section class="workflow-strip" aria-label="工作流程">
         <div><strong>01</strong><span>在 Codex 上传 DOCX</span></div>
-        <div><strong>02</strong><span>Codex 分析并生成计划</span></div>
+        <div><strong>02</strong><span>Agent 分析并生成计划</span></div>
         <div><strong>03</strong><span>保留原样式并插入异色内容</span></div>
         <div><strong>04</strong><span>在此下载生成文件</span></div>
       </section>
@@ -63,6 +63,6 @@
 
     <footer>University Experiment Report Review Skill · 本机环回地址 127.0.0.1</footer>
   </div>
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js', v='1.3.2') }}"></script>
 </body>
 </html>

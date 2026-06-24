@@ -1,96 +1,34 @@
-const latestReport = document.getElementById("latestReport");
-const reportList = document.getElementById("reportList");
-const recordCount = document.getElementById("recordCount");
-const refreshButton = document.getElementById("refreshButton");
-
-function element(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
+const latestReport=document.getElementById("latestReport"),reportList=document.getElementById("reportList"),recordCount=document.getElementById("recordCount"),refreshButton=document.getElementById("refreshButton");
+function element(tag,className,text){const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node;}
+async function readJson(response){const contentType=response.headers.get("content-type")||"";if(!response.ok)throw new Error(`HTTP ${response.status}`);if(!contentType.includes("application/json"))throw new Error("\u672c\u5730\u670d\u52a1\u7248\u672c\u4e0d\u5339\u914d\uff0c\u8bf7\u5173\u95ed\u65e7\u9875\u9762\u5e76\u4f7f\u7528\u672c\u6b21\u751f\u6210\u7684\u65b0\u5730\u5740");return response.json();}
+function typeBadge(report){const revision=report.report_kind==="revision";return element("span",`report-type${revision?" revision":""}`,revision?"修改报告":"实验执行报告");}
+function metric(label,value){const row=element("div","metric");row.append(element("span","",label),element("strong","",value||"—"));return row;}
+function reportFiles(report){const files=Array.isArray(report.files)?[...report.files]:[];if(!files.length&&report.download_url)files.push({kind:"annotated",label:report.report_label||"\u4e0b\u8f7d\u62a5\u544a",name:report.generated_name||"report.docx",download_url:report.download_url});return files;}
+function fileLinks(report,compact=false){const wrap=element("div",compact?"file-actions compact":"file-actions");reportFiles(report).filter(file=>file.kind!=="render-preview").forEach(file=>{const link=element("a",`download-button ${file.kind||""}`,file.label||"\u4e0b\u8f7d");link.href=file.download_url;link.setAttribute("download",file.name);wrap.append(link);});return wrap;}
+function prioritySummary(report){const counts=report.priority_counts||{},wrap=element("div","priority-row");[["blocker","阻塞"],["high","高"],["medium","中"],["low","低"],["optional","可选"]].forEach(([key,label])=>{if(counts[key])wrap.append(element("span",`priority ${key}`,`${label} ${counts[key]}`));});return wrap;}
+function renderPreview(report,container){const preview=reportFiles(report).find(file=>file.kind==="render-preview");if(!preview)return;const figure=element("figure","render-preview"),img=element("img");img.src=preview.download_url;img.alt="生成文档页面渲染预览";figure.append(img,element("figcaption","","页面渲染预览（点击下载可查看原图）"));container.append(figure);}
+function feedbackRow(action){const row=element("div","feedback-row");row.dataset.actionId=action.action_id;row.dataset.priority=action.priority||"medium";const head=element("div","feedback-head");head.append(element("span",`priority ${action.priority||"medium"}`,action.priority||"中"),element("strong","",action.label||`行动 ${action.action_id}`));const select=element("select","feedback-status");[["open","待处理"],["done","已完成"],["needs-review","需复核"],["skipped","跳过"]].forEach(([value,label])=>{const option=element("option","",label);option.value=value;option.selected=value===action.status;select.append(option);});const correction=element("textarea","feedback-correction");correction.placeholder="补充事实、修正判断或说明无法完成的原因";correction.value=action.correction||action.note||"";row.append(head,select,correction);return row;}
+function legacyFeedback(report){
+ const key=`experiment-report-feedback:${report.job_id}`;
+ try{const saved=JSON.parse(localStorage.getItem(key)||"null");if(saved&&Array.isArray(saved.actions))return saved;}catch(error){}
+ const sourceActions=Array.isArray(report.actions)?report.actions:[];
+ const actions=sourceActions.map((action,index)=>({action_id:index+1,label:action.label||`\u884c\u52a8 ${index+1}`,priority:action.priority||"medium",status:"open",note:"",correction:""}));
+ if(!actions.length)actions.push({action_id:1,label:"\u8865\u5145\u786e\u8ba4\u4fe1\u606f",priority:"medium",status:"open",note:"",correction:""});
+ return {job_id:report.job_id,source_name:report.source_name,updated_at:null,confirmed_context:{},actions};
 }
-
-function typeBadge(report) {
-  const isRevision = report.report_kind === "revision";
-  return element("span", `report-type${isRevision ? " revision" : ""}`, isRevision ? "修改报告" : "实验执行报告");
+function collectFeedback(report,rows,context){return {job_id:report.job_id,source_name:report.source_name,updated_at:new Date().toISOString(),confirmed_context:{user_notes:context.value},actions:[...rows.querySelectorAll(".feedback-row")].map(row=>({action_id:Number(row.dataset.actionId),label:row.querySelector("strong").textContent,priority:row.querySelector(".priority").dataset.priority||"medium",status:row.querySelector("select").value,correction:row.querySelector("textarea").value,note:""}))};}
+function downloadFeedback(payload){const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=`${payload.job_id}.feedback.json`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+async function renderFeedback(report,container){
+ const section=element("section","feedback-panel"),heading=element("div","feedback-title");heading.append(element("div","","") ,element("h3","","\u672c\u5730\u53cd\u9988\u95ed\u73af"));section.append(heading,element("p","feedback-help","\u586b\u5199\u8865\u5145\u4fe1\u606f\u5e76\u4fdd\u5b58\u3002\u65b0\u670d\u52a1\u4f1a\u4fdd\u5b58\u5230\u8f93\u51fa\u76ee\u5f55\uff1b\u65e7\u670d\u52a1\u4f1a\u76f4\u63a5\u4e0b\u8f7d feedback JSON\u3002"));
+ const rows=element("div","feedback-rows"),context=element("textarea","feedback-context");context.placeholder="\u8865\u5145\u5b9e\u9a8c\u73af\u5883\u3001\u6559\u5e08\u8981\u6c42\u3001\u8d26\u53f7\u5f52\u5c5e\u6216\u5176\u4ed6\u5df2\u786e\u8ba4\u4fe1\u606f";section.append(rows,context);
+ const actions=element("div","feedback-actions"),save=element("button","save-feedback","\u4fdd\u5b58\u53cd\u9988"),status=element("span","feedback-message","");actions.append(save,status);section.append(actions);container.append(section);
+ let compatibilityMode=false,feedback;
+ try{const response=await fetch(`/api/reports/${report.job_id}/feedback`,{cache:"no-store"});if(response.status===404){compatibilityMode=true;feedback=legacyFeedback(report);}else feedback=await readJson(response);}catch(error){compatibilityMode=true;feedback=legacyFeedback(report);}
+ (feedback.actions||[]).forEach(action=>rows.append(feedbackRow(action)));context.value=feedback.confirmed_context?.user_notes||"";
+ if(compatibilityMode)status.textContent="\u517c\u5bb9\u6a21\u5f0f\uff1a\u70b9\u51fb\u4fdd\u5b58\u540e\u76f4\u63a5\u4e0b\u8f7d JSON\u3002";
+ save.addEventListener("click",async()=>{save.disabled=true;const payload=collectFeedback(report,rows,context);localStorage.setItem(`experiment-report-feedback:${report.job_id}`,JSON.stringify(payload));try{if(compatibilityMode){downloadFeedback(payload);status.textContent="\u5df2\u4fdd\u5b58\u5e76\u4e0b\u8f7d feedback JSON\u3002";return;}const response=await fetch(`/api/reports/${report.job_id}/feedback`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});if(response.status===404){compatibilityMode=true;downloadFeedback(payload);status.textContent="\u65e7\u670d\u52a1\u517c\u5bb9\u4fdd\u5b58\uff1a\u5df2\u4e0b\u8f7d feedback JSON\u3002";return;}const result=await readJson(response);status.replaceChildren(element("span","","\u5df2\u4fdd\u5b58\u3002"));const link=element("a","feedback-download","\u4e0b\u8f7d\u53cd\u9988 JSON");link.href=result.download_url;status.append(link);}catch(error){downloadFeedback(payload);status.textContent="\u670d\u52a1\u4fdd\u5b58\u4e0d\u53ef\u7528\uff0c\u5df2\u6539\u4e3a\u672c\u5730\u4e0b\u8f7d JSON\u3002";}finally{save.disabled=false;}});
 }
-
-function metric(label, value) {
-  const row = element("div", "metric");
-  row.append(element("span", "", label), element("strong", "", value || "—"));
-  return row;
-}
-
-function downloadLink(report) {
-  const link = element("a", "download-button", "下载 DOCX");
-  link.href = report.download_url;
-  link.setAttribute("download", report.generated_name);
-  return link;
-}
-
-function renderLatest(report) {
-  latestReport.className = "latest-report";
-  latestReport.replaceChildren();
-  const grid = element("div", "latest-grid");
-  const content = element("div");
-  content.append(typeBadge(report));
-  content.append(element("div", "latest-title", report.generated_name));
-  content.append(element("p", "summary", report.summary || "已基于原始文档生成彩色标注版本。"));
-  if (report.verdict) content.append(element("div", "verdict", report.verdict));
-
-  const panel = element("div", "metric-panel");
-  panel.append(metric("原始文件", report.source_name));
-  panel.append(metric("原始状态", report.source_state));
-  panel.append(metric("新增内容", `${report.addition_count || 0} 项`));
-  panel.append(metric("生成时间", report.created_at));
-  panel.append(downloadLink(report));
-  grid.append(content, panel);
-  latestReport.append(grid);
-}
-
-function renderHistory(reports) {
-  reportList.replaceChildren();
-  const history = reports.slice(1);
-  recordCount.textContent = `${reports.length} 个本地结果`;
-  if (!history.length) {
-    reportList.append(element("div", "latest-report empty-state", "暂无更多历史记录。"));
-    return;
-  }
-  history.forEach((report) => {
-    const card = element("article", "report-card");
-    const copy = element("div");
-    copy.append(typeBadge(report));
-    copy.append(element("h3", "", report.generated_name));
-    copy.append(element("p", "", `${report.source_name} · ${report.created_at}`));
-    card.append(copy, downloadLink(report));
-    reportList.append(card);
-  });
-}
-
-async function loadReports() {
-  refreshButton.disabled = true;
-  try {
-    const response = await fetch("/api/reports", { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = await response.json();
-    const reports = Array.isArray(payload.reports) ? payload.reports : [];
-    if (!reports.length) {
-      latestReport.className = "latest-report empty-state";
-      latestReport.textContent = "还没有生成文件。请先在 Codex 中上传 DOCX 并运行本 skill。";
-      reportList.replaceChildren();
-      recordCount.textContent = "0 个本地结果";
-      return;
-    }
-    renderLatest(reports[0]);
-    renderHistory(reports);
-  } catch (error) {
-    latestReport.className = "latest-report empty-state";
-    latestReport.textContent = `无法读取本地结果：${error.message}`;
-  } finally {
-    refreshButton.disabled = false;
-  }
-}
-
-refreshButton.addEventListener("click", loadReports);
-loadReports();
-setInterval(loadReports, 5000);
+function renderLatest(report){latestReport.className="latest-report";latestReport.replaceChildren();const grid=element("div","latest-grid"),content=element("div");content.append(typeBadge(report),element("div","latest-title",report.generated_name),element("p","summary",report.summary||"已生成本地报告。"));if(report.verdict)content.append(element("div","verdict",report.verdict));content.append(prioritySummary(report));const panel=element("div","metric-panel");const renderStatus=report.quality?.render?.status||"未运行";panel.append(metric("原始文件",report.source_name),metric("原始状态",report.source_state),metric("领域",report.domain_profile||"通用"),metric("新增内容",`${report.addition_count||0} 项`),metric("结构检查",report.quality?.ok?"通过":"待检查"),metric("页面渲染",renderStatus),metric("生成时间",report.created_at),fileLinks(report));grid.append(content,panel);latestReport.append(grid);renderPreview(report,latestReport);renderFeedback(report,latestReport);}
+function renderHistory(reports){reportList.replaceChildren();recordCount.textContent=`${reports.length} \u4e2a\u672c\u5730\u7ed3\u679c`;reports.forEach((report,index)=>{const card=element("article","report-card"),copy=element("div");copy.append(typeBadge(report),element("h3","",report.generated_name),element("p","",`${report.source_name} \u00b7 ${report.created_at}${index===0?" \u00b7 \u6700\u65b0":""}`));card.append(copy,fileLinks(report,true));reportList.append(card);});}
+async function loadReports(){refreshButton.disabled=true;try{const response=await fetch("/api/reports",{cache:"no-store"});const reports=(await readJson(response)).reports||[];if(!reports.length){latestReport.className="latest-report empty-state";latestReport.textContent="还没有生成文件。请先在支持 AgentSkills 的客户端运行本 skill。";reportList.replaceChildren();recordCount.textContent="0 个本地结果";return;}renderLatest(reports[0]);renderHistory(reports);}catch(error){latestReport.className="latest-report empty-state";latestReport.textContent=`无法读取本地结果：${error.message}`;}finally{refreshButton.disabled=false;}}
+refreshButton.addEventListener("click",loadReports);loadReports();setInterval(loadReports,8000);

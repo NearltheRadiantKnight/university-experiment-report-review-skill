@@ -1,22 +1,35 @@
 {
-  "report_kind": "revision",
-  "source_state": "completed",
-  "summary": "报告主体完整，但关键截图与正文参数不能相互核对，结论也缺少证据引用。",
-  "verdict": "小修后可提交：补充可读截图并改写结论中的证据说明。",
-  "additions": [
-    {
-      "anchor_text": "实验结果",
-      "position": "after",
-      "category": "issue",
-      "label": "证据不足",
-      "text": "当前截图未显示完整命令和关键参数，技术正确性无法从报告中验证。"
-    },
-    {
-      "anchor_text": "实验结果",
-      "position": "after",
-      "category": "suggestion",
-      "label": "修改动作",
-      "text": "替换为原始分辨率截图，保留窗口标题、完整命令、目标参数和结果摘要，并在正文逐项解释。"
-    }
-  ]
+    "report_kind":  "revision",
+    "source_state":  "completed",
+    "summary":  "报告主体完整，但关键截图与正文参数不能相互核对，结论缺少证据引用。",
+    "verdict":  "小修后可提交：补充可读截图并改写证据说明。",
+    "strict_anchors":  true,
+    "generate_companion":  true,
+    "additions":  [
+                      {
+                          "anchor_text":  "实验结果",
+                          "category":  "issue",
+                          "priority":  "high",
+                          "evidence_basis":  "screenshot",
+                          "block_type":  "paragraph",
+                          "label":  "证据不足",
+                          "text":  "当前截图未显示完整命令和关键参数，技术正确性无法从报告中验证。"
+                      },
+                      {
+                          "anchor_text":  "实验结果",
+                          "category":  "suggestion",
+                          "priority":  "high",
+                          "evidence_basis":  "screenshot",
+                          "block_type":  "checklist",
+                          "label":  "修改动作",
+                          "items":  [
+                                        "替换为原始分辨率截图",
+                                        "保留窗口标题、完整命令、目标参数和结果摘要",
+                                        "在正文逐项解释截图证据"
+                                    ]
+                      }
+                  ],
+    "domain_profile":  "networking",
+    "domain_confidence":  "high",
+    "domain_profile_basis":  "正文包含网络配置与连通性截图证据。"
 }

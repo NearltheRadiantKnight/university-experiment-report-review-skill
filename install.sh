@@ -17,7 +17,7 @@ set -eu
 # Constants
 # ---------------------------------------------------------------------------
 SKILL_NAME="university-experiment-report-review-skill"
-VERSION="1.0.0"
+VERSION="1.3.2"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ---------------------------------------------------------------------------
@@ -62,7 +62,7 @@ OPTIONS
                           claude-code, copilot, cursor, windsurf,
                           cline, codex, gemini, kiro, trae, goose,
                           opencode, roo-code, kilo-code, factory,
-                          junie, antigravity, universal
+                          junie, antigravity, openclaw, universal
     --project             Install at project level (current directory)
     --path PATH           Custom install path (overrides detection)
     --all                 Install to ALL detected tool paths at once
@@ -187,7 +187,7 @@ validate_skill_md() {
 # ---------------------------------------------------------------------------
 # Platform detection
 # ---------------------------------------------------------------------------
-SUPPORTED_PLATFORMS="claude-code, copilot, cursor, windsurf, cline, codex, gemini, kiro, trae, goose, opencode, roo-code, kilo-code, factory, junie, antigravity, universal"
+SUPPORTED_PLATFORMS="claude-code, copilot, cursor, windsurf, cline, codex, gemini, kiro, trae, goose, opencode, roo-code, kilo-code, factory, junie, antigravity, openclaw, universal"
 
 detect_platform() {
     # If explicitly provided, validate and return it.
@@ -195,7 +195,7 @@ detect_platform() {
         case "$PLATFORM" in
             claude-code|copilot|cursor|windsurf|cline|codex|gemini|\
             kiro|trae|goose|opencode|roo-code|kilo-code|factory|\
-            junie|antigravity|universal)
+            junie|antigravity|openclaw|universal)
                 info "Platform explicitly set to: ${PLATFORM}"
                 return 0
                 ;;
@@ -209,7 +209,9 @@ detect_platform() {
 
     # Auto-detection: check user-level config directories.
     # Order matters — check most specific / least ambiguous first.
-    if [ -d "${HOME}/.claude" ]; then
+    if [ -d "${HOME}/.openclaw" ]; then
+        PLATFORM="openclaw"
+    elif [ -d "${HOME}/.claude" ]; then
         PLATFORM="claude-code"
     elif [ -d "${HOME}/.copilot" ] || [ -d ".github" ]; then
         PLATFORM="copilot"
@@ -254,6 +256,9 @@ detect_platform() {
 # ---------------------------------------------------------------------------
 detect_all_platforms() {
     ALL_PLATFORMS=""
+    if [ -d "${HOME}/.openclaw" ]; then
+        ALL_PLATFORMS="${ALL_PLATFORMS} openclaw"
+    fi
     if [ -d "${HOME}/.claude" ]; then
         ALL_PLATFORMS="${ALL_PLATFORMS} claude-code"
     fi
@@ -340,6 +345,7 @@ resolve_install_path() {
             factory)       base=".factory/skills" ;;
             junie)         base=".junie/skills" ;;
             antigravity)   base=".agent/skills" ;;
+            openclaw)      base="skills" ;;
             universal)     base=".agents/skills" ;;
         esac
         INSTALL_DIR="$(pwd)/${base}/${SKILL_NAME}"
@@ -362,6 +368,7 @@ resolve_install_path() {
             factory)       base="${HOME}/.factory/skills" ;;
             junie)         base="${HOME}/.junie/skills" ;;
             antigravity)   base="${HOME}/.gemini/antigravity/skills" ;;
+            openclaw)      base="${HOME}/.openclaw/skills" ;;
             universal)     base="${HOME}/.agents/skills" ;;
         esac
         INSTALL_DIR="${base}/${SKILL_NAME}"
@@ -822,6 +829,12 @@ print_activation_instructions() {
             printf "     ${BOLD}${INSTALL_DIR}/SKILL.md${NC}\n"
             printf "  3. Antigravity reads from .agent/skills/ automatically.\n"
             printf "  Note: .agent/ (singular), NOT .agents/ (plural).\n"
+            ;;
+        openclaw)
+            printf "To activate the skill in OpenClaw:\n"
+            printf "  1. Start a new OpenClaw session or restart the gateway.\n"
+            printf "  2. Verify with: openclaw skills list\n"
+            printf "  3. Invoke /${SKILL_NAME} or describe an experiment-report task.\n"
             ;;
         universal)
             printf "The skill is installed at the universal path:\n"

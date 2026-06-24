@@ -61,3 +61,7 @@
 ```
 
 对于足够清楚且能支撑正文的截图，可以写“证据充分，无需修改”，不必强行要求更多图片。
+
+## 10. Local Contact Sheet and Context Map
+
+`inspect_report.py` records nearby DOCX paragraph text for each embedded image and creates `contact-sheet.jpg` when Pillow is available. The contact sheet is only an overview: the agent must still open important source images individually. Context text helps map a screenshot to a section but never substitutes for visual evidence.
