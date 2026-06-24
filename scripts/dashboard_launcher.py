@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import hashlib
+import socket
 import subprocess
 import sys
 import time
@@ -18,12 +20,52 @@ ROOT = Path(__file__).resolve().parents[1]
 SERVER_SCRIPT = ROOT / "scripts" / "dashboard_server.py"
 
 
-def _healthy(url: str) -> bool:
+SERVICE_NAME = "university-experiment-report-dashboard"
+API_VERSION = 2
+
+
+def _output_dir_id(output_dir: Path) -> str:
+    return hashlib.sha256(str(output_dir.resolve()).casefold().encode("utf-8")).hexdigest()[:16]
+
+
+def _health(url: str) -> dict[str, object] | None:
     try:
         with urllib.request.urlopen(f"{url}/api/health", timeout=1.0) as response:
-            return response.status == 200
-    except (OSError, urllib.error.URLError):
-        return False
+            if response.status != 200:
+                return None
+            payload = json.loads(response.read().decode("utf-8"))
+            return payload if isinstance(payload, dict) else None
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, urllib.error.URLError):
+        return None
+
+
+def _matching_dashboard(url: str, output_dir: Path) -> bool:
+    health = _health(url)
+    return bool(
+        health
+        and health.get("service") == SERVICE_NAME
+        and health.get("api_version") == API_VERSION
+        and health.get("output_dir_id") == _output_dir_id(output_dir)
+    )
+
+
+def _port_available(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        try:
+            probe.bind(("127.0.0.1", port))
+        except OSError:
+            return False
+    return True
+
+
+def _select_port(output_dir: Path, requested_port: int) -> tuple[int, bool]:
+    for port in range(requested_port, min(requested_port + 100, 65536)):
+        url = f"http://127.0.0.1:{port}"
+        if _matching_dashboard(url, output_dir):
+            return port, True
+        if _port_available(port):
+            return port, False
+    raise RuntimeError("No available dashboard port was found.")
 
 
 def launch_dashboard(output_dir: Path, port: int = 8765, open_browser: bool = True) -> str:
@@ -31,16 +73,17 @@ def launch_dashboard(output_dir: Path, port: int = 8765, open_browser: bool = Tr
     if port < 1024 or port > 65535:
         raise ValueError("port must be between 1024 and 65535")
     output_dir.mkdir(parents=True, exist_ok=True)
-    url = f"http://127.0.0.1:{port}"
+    selected_port, already_running = _select_port(output_dir, port)
+    url = f"http://127.0.0.1:{selected_port}"
 
-    if not _healthy(url):
+    if not already_running:
         command = [
             sys.executable,
             str(SERVER_SCRIPT),
             "--output-dir",
             str(output_dir.resolve()),
             "--port",
-            str(port),
+            str(selected_port),
         ]
         creation_flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
         subprocess.Popen(
@@ -53,7 +96,7 @@ def launch_dashboard(output_dir: Path, port: int = 8765, open_browser: bool = Tr
         )
         deadline = time.monotonic() + 10
         while time.monotonic() < deadline:
-            if _healthy(url):
+            if _matching_dashboard(url, output_dir):
                 break
             time.sleep(0.2)
         else:

@@ -29,3 +29,15 @@ Semantic classification and plan authorship require Codex judgment. Delivery aft
 ## Scoring
 
 Teacher rubrics override the default rubric. Without course-specific weights, submission readiness and evidence-based dimension states are preferred over false-precision scores.
+
+## ADR-006: Keep one core skill with local domain profiles
+
+The domains share one document-preparation, plan, generation, QA, dashboard, and privacy pipeline. They are implemented as lazy-loaded JSON profiles rather than independent component skills. This keeps installation and invocation stable while allowing domain-specific evidence rules.
+
+## ADR-007: Render status is evidence, not an assumption
+
+The pipeline tries configured external renderers, LibreOffice, then Windows Word COM. Missing backends produce `unavailable`; they never count as a visual pass. `--require-render` turns this into a hard gate.
+
+## ADR-008: Feedback is local data, not a model endpoint
+
+The Dashboard stores bounded JSON feedback beside job metadata. No uploaded document or prompt is sent to a model. A later AgentSkills session consumes the JSON as explicit user evidence.

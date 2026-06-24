@@ -127,6 +127,10 @@ class GeneratedReportTests(unittest.TestCase):
             page = client.get("/")
             self.assertEqual(page.status_code, 200)
             self.assertIn("实验报告生成中心".encode("utf-8"), page.data)
+            health = client.get("/api/health").get_json()
+            self.assertEqual(health["service"], "university-experiment-report-dashboard")
+            self.assertEqual(health["api_version"], 2)
+            self.assertTrue(health["output_dir_id"])
             listing = client.get("/api/reports")
             self.assertEqual(listing.status_code, 200)
             payload = listing.get_json()
@@ -137,6 +141,15 @@ class GeneratedReportTests(unittest.TestCase):
             self.assertGreater(len(download.data), 100)
             download.close()
             self.assertEqual(client.get("/api/reports/not-valid/download").status_code, 404)
+
+
+class LegacyDashboardFrontendTests(unittest.TestCase):
+    def test_legacy_download_and_feedback_fallbacks_are_bundled(self) -> None:
+        script = (SCRIPTS_DIR.parent / "assets" / "dashboard" / "static" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("report.download_url", script)
+        self.assertIn("legacyFeedback", script)
+        self.assertIn("downloadFeedback", script)
+        self.assertIn("response.status===404", script)
 
 
 if __name__ == "__main__":

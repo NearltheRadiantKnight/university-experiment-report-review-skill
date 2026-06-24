@@ -25,7 +25,7 @@ $ErrorActionPreference = "Stop"
 # Constants
 # ---------------------------------------------------------------------------
 $SkillName = "university-experiment-report-review-skill"
-$Version = "1.0.0"
+$Version = "1.3.2"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $HomeDir = $env:USERPROFILE
 
@@ -52,7 +52,7 @@ OPTIONS
                        claude-code, copilot, cursor, windsurf,
                        cline, codex, gemini, kiro, trae, goose,
                        opencode, roo-code, kilo-code, factory,
-                       junie, antigravity, universal
+                       junie, antigravity, openclaw, universal
     -Project           Install at project level (current directory)
     -Path <path>       Custom install path (overrides detection)
     -All               Install to ALL detected tool paths at once
@@ -122,7 +122,7 @@ function Test-SkillMd {
 $SupportedPlatforms = @(
     "claude-code", "copilot", "cursor", "windsurf", "cline", "codex",
     "gemini", "kiro", "trae", "goose", "opencode", "roo-code",
-    "kilo-code", "factory", "junie", "antigravity", "universal"
+    "kilo-code", "factory", "junie", "antigravity", "openclaw", "universal"
 )
 
 # ---------------------------------------------------------------------------
@@ -140,6 +140,7 @@ function Find-Platform {
     }
 
     $checks = @(
+        @{ Dir = ".openclaw";          Name = "openclaw" },
         @{ Dir = ".claude";           Name = "claude-code" },
         @{ Dir = ".copilot";          Name = "copilot" },
         @{ Dir = ".cursor";           Name = "cursor" },
@@ -157,6 +158,7 @@ function Find-Platform {
 
     # Also check project-level dirs
     $projectChecks = @(
+        @{ Dir = "skills";    Name = "openclaw" },
         @{ Dir = ".github";    Name = "copilot" },
         @{ Dir = ".cursor";    Name = "cursor" },
         @{ Dir = ".windsurf";  Name = "windsurf" },
@@ -197,6 +199,7 @@ function Find-AllPlatforms {
     $found = @()
 
     $globalChecks = @(
+        @{ Dir = ".openclaw";          Name = "openclaw" },
         @{ Dir = ".claude";           Name = "claude-code" },
         @{ Dir = ".copilot";          Name = "copilot" },
         @{ Dir = ".cursor";           Name = "cursor" },
@@ -212,6 +215,7 @@ function Find-AllPlatforms {
     )
 
     $projectChecks = @(
+        @{ Dir = "skills";    Name = "openclaw" },
         @{ Dir = ".github";    Name = "copilot" },
         @{ Dir = ".cursor";    Name = "cursor" },
         @{ Dir = ".windsurf";  Name = "windsurf" },
@@ -273,9 +277,10 @@ function Resolve-InstallPath {
             "factory"       { ".factory\skills" }
             "junie"         { ".junie\skills" }
             "antigravity"   { ".agent\skills" }
+            "openclaw"      { "skills" }
             "universal"     { ".agents\skills" }
         }
-        return Join-Path (Get-Location) $base $SkillName
+        return Join-Path (Join-Path (Get-Location) $base) $SkillName
     } else {
         $base = switch ($Plat) {
             "claude-code"   { Join-Path $HomeDir ".claude\skills" }
@@ -294,6 +299,7 @@ function Resolve-InstallPath {
             "factory"       { Join-Path $HomeDir ".factory\skills" }
             "junie"         { Join-Path $HomeDir ".junie\skills" }
             "antigravity"   { Join-Path $HomeDir ".gemini\antigravity\skills" }
+            "openclaw"      { Join-Path $HomeDir ".openclaw\skills" }
             "universal"     { Join-Path $HomeDir ".agents\skills" }
         }
         return Join-Path $base $SkillName
@@ -322,6 +328,7 @@ function Get-PlatformDisplay {
         "factory"       { "Factory Droid" }
         "junie"         { "Junie" }
         "antigravity"   { "Antigravity" }
+        "openclaw"      { "OpenClaw" }
         "universal"     { "Universal" }
         default         { $Plat }
     }
@@ -570,7 +577,7 @@ function Install-UniversalSecondary {
 
     if ($Plat -in "codex", "universal") { return }
 
-    $universalDir = Join-Path $HomeDir ".agents\skills" $SkillName
+    $universalDir = Join-Path (Join-Path $HomeDir ".agents\skills") $SkillName
 
     if ($DryRun) {
         Write-Info "[dry-run] Would create universal link: $universalDir -> $InstallDir"
@@ -597,6 +604,7 @@ function Install-Files {
         $_.Name -ne $installScriptName -and
         $_.Name -ne "install.sh" -and
         $_.Name -ne "install.ps1" -and
+        $_.Name -ne ".git" -and
         $_.Name -ne "." -and
         $_.Name -ne ".."
     }

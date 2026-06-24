@@ -1,22 +1,40 @@
 {
-  "report_kind": "execution",
-  "source_state": "blank",
-  "summary": "该模板尚未填写。新增内容用于指导真实执行、截图留证和章节写作，不包含虚构结果。",
-  "verdict": "尚未完成：请按蓝色与青色提示执行实验，并用真实结果替换模板占位内容。",
-  "additions": [
-    {
-      "anchor_text": "实验步骤",
-      "position": "after",
-      "category": "guidance",
-      "label": "执行顺序",
-      "text": "先确认实验环境和任务参数，再按任务书逐项执行。每一步记录实际命令、参数、现象和异常。"
-    },
-    {
-      "anchor_text": "实验结果",
-      "position": "after",
-      "category": "evidence",
-      "label": "截图要求",
-      "text": "在关键配置完成后和最终验证时分别截图，确保命令、目标对象、关键参数与完整结果可读。"
-    }
-  ]
+    "report_kind":  "execution",
+    "source_state":  "blank",
+    "summary":  "该模板尚未填写。新增内容用于指导真实执行、截图留证和章节写作，不包含虚构结果。",
+    "verdict":  "尚未完成：请按执行清单完成实验并记录真实证据。",
+    "strict_anchors":  true,
+    "generate_companion":  true,
+    "appendix_title":  "提交前检查",
+    "additions":  [
+                      {
+                          "anchor_text":  "实验步骤",
+                          "category":  "guidance",
+                          "priority":  "high",
+                          "evidence_basis":  "template",
+                          "block_type":  "checklist",
+                          "label":  "执行顺序",
+                          "items":  [
+                                        "确认实验环境和任务参数",
+                                        "按任务书逐项执行",
+                                        "记录实际命令、参数、现象和异常"
+                                    ]
+                      },
+                      {
+                          "anchor_text":  "实验结果",
+                          "category":  "evidence",
+                          "priority":  "high",
+                          "evidence_basis":  "template",
+                          "block_type":  "bullets",
+                          "label":  "截图要求",
+                          "items":  [
+                                        "保留窗口标题和目标对象",
+                                        "确保关键参数与完整结果可读",
+                                        "在正文引用对应图号"
+                                    ]
+                      }
+                  ],
+    "domain_profile":  "database",
+    "domain_confidence":  "high",
+    "domain_profile_basis":  "模板包含数据库、建表和查询任务。"
 }
