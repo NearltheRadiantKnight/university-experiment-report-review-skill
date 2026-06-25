@@ -4,6 +4,12 @@
 - Added local AgentSkills improvement requests driven by saved feedback evidence.
 - Added Dashboard generation settings for budget, depth, focus, and output mode.
 - Added explicit render-state explanations, local preview, and retry actions.
+## 1.5.3 - 2026-06-25
+- 修复 Dashboard 弹窗关闭按钮的可点击区域与无障碍标签。
+- 修复反馈行动行布局冲突，删除按钮改为稳定单行按钮。
+- 默认隐藏无渲染器时的页面预览警告，避免把 DOCX 可下载状态误报成失败。
+- 增加前端按钮与渲染状态回归测试。
+
 ## 1.4.0 - 2026-06-24
 
 - Added time-budgeted rescue modes and green/yellow/red submission signals.

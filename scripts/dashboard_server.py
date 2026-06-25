@@ -9,7 +9,7 @@ from flask import Flask,abort,jsonify,render_template,request,send_file
 from qa_report import render_report
 ROOT=Path(__file__).resolve().parents[1]; TEMPLATE_DIR=ROOT/"assets"/"dashboard"/"templates"; STATIC_DIR=ROOT/"assets"/"dashboard"/"static"
 DASHBOARD_API_VERSION=4
-DASHBOARD_ASSET_VERSION="1.5.2"
+DASHBOARD_ASSET_VERSION="1.5.3"
 PRIORITY_LABELS={"blocker":"阻塞","high":"高","medium":"中","low":"低","optional":"可选"}
 
 def _output_dir_id(output_dir:Path)->str:

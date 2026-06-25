@@ -17,7 +17,7 @@ set -eu
 # Constants
 # ---------------------------------------------------------------------------
 SKILL_NAME="university-experiment-report-review-skill"
-VERSION="1.5.2"
+VERSION="1.5.3"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ---------------------------------------------------------------------------

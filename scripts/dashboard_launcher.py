@@ -22,7 +22,7 @@ SERVER_SCRIPT = ROOT / "scripts" / "dashboard_server.py"
 
 SERVICE_NAME = "university-experiment-report-dashboard"
 API_VERSION = 4
-ASSET_VERSION = "1.5.2"
+ASSET_VERSION = "1.5.3"
 
 
 def _output_dir_id(output_dir: Path) -> str:

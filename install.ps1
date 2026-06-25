@@ -25,7 +25,7 @@ $ErrorActionPreference = "Stop"
 # Constants
 # ---------------------------------------------------------------------------
 $SkillName = "university-experiment-report-review-skill"
-$Version = "1.5.2"
+$Version = "1.5.3"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $HomeDir = $env:USERPROFILE
 

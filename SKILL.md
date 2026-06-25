@@ -5,8 +5,8 @@ license: MIT
 compatibility: AgentSkills-compatible; tested contracts for Codex CLI, Claude Code, and OpenClaw.
 user-invocable: true
 activation: /university-experiment-report-review-skill
-provenance: {"maintainer":"Codex","version":"1.5.2","created":"2026-06-23","source_references":["User workflow description","OpenClaw official skills documentation"]}
-metadata: {"author":"Codex","version":"1.5.2","created":"2026-06-23","last_reviewed":"2026-06-23","review_interval_days":90,"openclaw":{"emoji":"🧪","requires":{"bins":["python"]}}}
+provenance: {"maintainer":"Codex","version":"1.5.3","created":"2026-06-23","source_references":["User workflow description","OpenClaw official skills documentation"]}
+metadata: {"author":"Codex","version":"1.5.3","created":"2026-06-23","last_reviewed":"2026-06-23","review_interval_days":90,"openclaw":{"emoji":"🧪","requires":{"bins":["python"]}}}
 ---
 # /university-experiment-report-review-skill — 大学生实验报告指导与审阅
 
