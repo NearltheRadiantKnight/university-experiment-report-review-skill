@@ -12,7 +12,7 @@
       <div>
         <p class="eyebrow">LOCAL CODEX WORKSPACE</p>
         <h1>实验报告生成中心</h1>
-        <p class="hero-copy">查看审阅结论、优先行动和质量状态，并下载批注报告、行动清单与质量报告。支持 Codex、Claude Code、OpenClaw 等 AgentSkills 客户端。</p>
+        <p class="hero-copy">查看审阅结论、优先行动和质量状态，并下载整合批注报告与本地反馈。支持 Codex、Claude Code、OpenClaw 等 AgentSkills 客户端。</p>
       </div>
       <div class="privacy-badge"><span></span>无外部模型 API</div>
     </header>
@@ -31,8 +31,11 @@
             <p class="eyebrow">LATEST OUTPUT</p>
             <h2>最新生成结果</h2>
           </div>
-          <button id="refreshButton" type="button">刷新</button>
-          <button id="historyFeedbackBtn" type="button">历史反馈</button>
+          <div class="header-actions">
+            <button id="generationSettingsBtn" type="button">生成设置</button>
+            <button id="historyFeedbackBtn" type="button">历史反馈</button>
+            <button id="refreshButton" type="button">刷新</button>
+          </div>
         </div>
         <div id="latestReport" class="latest-report loading">正在读取本地生成记录…</div>
       </section>
@@ -64,6 +67,6 @@
 
     <footer>University Experiment Report Review Skill · 本机环回地址 127.0.0.1</footer>
   </div>
-  <script src="{{ url_for('static', filename='app.js', v='1.3.2') }}"></script>
+  <script src="{{ url_for('static', filename='app.js', v='1.5.7') }}"></script>
 </body>
 </html>

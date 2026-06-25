@@ -12,13 +12,13 @@ A successful backend produces a PDF, page PNGs, and a contact-sheet preview. Str
 
 The reviewing agent must inspect every rendered page image when status is `passed`. The deterministic script cannot decide aesthetics, overlap meaning, or screenshot legibility by itself.
 
-## Feedback
+## Feedback and Personal Memory
 
-The Dashboard GET/POST route `/api/reports/<job_id>/feedback` accepts only bounded JSON on loopback. Actions support `open`, `done`, `needs-review`, and `skipped`. Confirmed context and corrections become a downloadable feedback JSON.
+The Dashboard has two separate user inputs:
 
-On a later turn:
+- Report feedback: action-level corrections for the current generated report. These records can be edited, deleted, and saved from current or historical feedback dialogs.
+- Personal memory: cross-document notes such as student information, course names, teacher requirements, software versions, and account ownership. This is stored separately in `personal-memory.json` and is not evidence that one report already contains that information.
 
-1. Read the original report, latest metadata, and feedback JSON.
-2. Treat confirmed context as user evidence.
-3. Re-check only affected findings and any dependencies.
-4. Produce a new immutable job; never overwrite the old report or metadata.
+Every feedback save, update, or deletion automatically updates the local skill-improvement queue. The student-facing page should describe this as being recorded for later improvement, and should not show machine file names, debug fields, queue internals, or raw metadata.
+
+When a local maintenance agent consumes the queue, it must separate one-report corrections from reusable skill defects, use `agent-skill-creator` only for reusable changes, and run the full validation suite before installation or publishing.

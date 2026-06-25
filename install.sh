@@ -17,7 +17,7 @@ set -eu
 # Constants
 # ---------------------------------------------------------------------------
 SKILL_NAME="university-experiment-report-review-skill"
-VERSION="1.3.2"
+VERSION="1.5.7"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ---------------------------------------------------------------------------
@@ -608,6 +608,7 @@ install_files() {
         for file in "${SCRIPT_DIR}"/*; do
             [ -e "$file" ] || continue
             fname="$(basename "$file")"
+        case "$fname" in .git|.pytest_cache|__pycache__) continue ;; esac
             # Skip the install script itself
             [ "$fname" = "$install_script_name" ] && continue
             info "Would copy: ${fname}"
@@ -617,6 +618,7 @@ install_files() {
         for file in "${SCRIPT_DIR}"/.*; do
             [ -e "$file" ] || continue
             fname="$(basename "$file")"
+        case "$fname" in .git|.pytest_cache|__pycache__) continue ;; esac
             if [ "$fname" = "." ] || [ "$fname" = ".." ]; then continue; fi
             info "Would copy: ${fname}"
             file_count=$((file_count + 1))
@@ -642,6 +644,7 @@ install_files() {
     for file in "${SCRIPT_DIR}"/*; do
         [ -e "$file" ] || continue
         fname="$(basename "$file")"
+        case "$fname" in .git|.pytest_cache|__pycache__) continue ;; esac
         [ "$fname" = "$install_script_name" ] && continue
 
         if ! cp -R "$file" "${INSTALL_DIR}/" 2>/dev/null; then
@@ -656,6 +659,7 @@ install_files() {
     for file in "${SCRIPT_DIR}"/.*; do
         [ -e "$file" ] || continue
         fname="$(basename "$file")"
+        case "$fname" in .git|.pytest_cache|__pycache__) continue ;; esac
         [ "$fname" = "." ] || [ "$fname" = ".." ] && continue
 
         if ! cp -R "$file" "${INSTALL_DIR}/" 2>/dev/null; then

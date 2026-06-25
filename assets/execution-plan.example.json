@@ -1,40 +1,51 @@
 {
-    "report_kind":  "execution",
-    "source_state":  "blank",
-    "summary":  "该模板尚未填写。新增内容用于指导真实执行、截图留证和章节写作，不包含虚构结果。",
-    "verdict":  "尚未完成：请按执行清单完成实验并记录真实证据。",
-    "strict_anchors":  true,
-    "generate_companion":  true,
-    "appendix_title":  "提交前检查",
-    "additions":  [
-                      {
-                          "anchor_text":  "实验步骤",
-                          "category":  "guidance",
-                          "priority":  "high",
-                          "evidence_basis":  "template",
-                          "block_type":  "checklist",
-                          "label":  "执行顺序",
-                          "items":  [
-                                        "确认实验环境和任务参数",
-                                        "按任务书逐项执行",
-                                        "记录实际命令、参数、现象和异常"
-                                    ]
-                      },
-                      {
-                          "anchor_text":  "实验结果",
-                          "category":  "evidence",
-                          "priority":  "high",
-                          "evidence_basis":  "template",
-                          "block_type":  "bullets",
-                          "label":  "截图要求",
-                          "items":  [
-                                        "保留窗口标题和目标对象",
-                                        "确保关键参数与完整结果可读",
-                                        "在正文引用对应图号"
-                                    ]
-                      }
-                  ],
-    "domain_profile":  "database",
-    "domain_confidence":  "high",
-    "domain_profile_basis":  "模板包含数据库、建表和查询任务。"
+  "report_kind": "execution",
+  "source_state": "blank",
+  "summary": "该模板尚未填写。新增内容用于指导真实执行、截图留证和章节写作，不包含虚构结果。",
+  "verdict": "尚未完成：请按执行清单完成实验并记录真实证据。",
+  "strict_anchors": true,
+  "generate_companion": false,
+  "appendix_title": "提交前检查",
+  "additions": [
+    {
+      "anchor_text": "实验步骤",
+      "category": "guidance",
+      "priority": "high",
+      "evidence_basis": "template",
+      "block_type": "checklist",
+      "label": "执行顺序",
+      "items": [
+        "确认实验环境和任务参数",
+        "按任务书逐项执行",
+        "记录实际命令、参数、现象和异常"
+      ],
+      "estimated_minutes": 15
+    },
+    {
+      "anchor_text": "实验结果",
+      "category": "evidence",
+      "priority": "high",
+      "evidence_basis": "template",
+      "block_type": "bullets",
+      "label": "截图要求",
+      "items": [
+        "保留窗口标题和目标对象",
+        "确保关键参数与完整结果可读",
+        "在正文引用对应图号"
+      ],
+      "estimated_minutes": 15
+    }
+  ],
+  "domain_profile": "database",
+  "domain_confidence": "high",
+  "domain_profile_basis": "模板包含数据库、建表和查询任务。",
+  "time_budget": "full",
+  "submission_signal": "red",
+  "estimated_minutes": 30,
+  "false_completion_findings": [],
+  "contamination_findings": [],
+  "screenshot_evidence": [],
+  "review_depth": "standard",
+  "review_focus": "comprehensive",
+  "output_mode": "single_docx"
 }

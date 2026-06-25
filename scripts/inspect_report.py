@@ -16,14 +16,12 @@ import sys
 import zipfile
 from pathlib import Path
 from typing import Any
+from review_signals import classify_report_signals
 from xml.etree import ElementTree
 
 SKILL_NAME = "university-experiment-report-review-skill"
-VERSION = "1.3.2"
-SUPPORTED_SUFFIXES = {
-    ".docx",
-    ".pdf",
-}
+VERSION = "1.5.0"
+SUPPORTED_SUFFIXES = {".docx", ".pdf", ".txt", ".md", ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff"}
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff"}
 
 
@@ -272,6 +270,25 @@ def _prepare_image(input_path: Path, output_dir: Path) -> tuple[str, list[dict[s
     return "", [{"kind": "input-image", "path": destination.relative_to(output_dir).as_posix()}], []
 
 
+def _annotate_visuals(output_dir: Path, visuals: list[dict[str, Any]], warnings: list[str]) -> None:
+    """Attach local dimensions and conservative readability hints."""
+    try:
+        from PIL import Image
+    except ImportError:
+        warnings.append("Pillow is unavailable; screenshot dimensions were not inspected.")
+        return
+    for visual in visuals:
+        path = output_dir / str(visual.get("path", ""))
+        try:
+            with Image.open(path) as image:
+                width, height = image.size
+            visual["width"] = width
+            visual["height"] = height
+            visual["review_hint"] = "retake-or-original-resolution" if width < 900 or height < 500 else "inspect-visually"
+        except Exception as exc:
+            visual["review_hint"] = "unreadable"
+            warnings.append(f"Could not inspect screenshot dimensions for {path.name}: {exc}")
+
 def prepare_report(input_path: Path, output_dir: Path, max_pages: int = 80) -> Path:
     """Extract local text and visuals and write a review manifest.
 
@@ -305,6 +322,7 @@ def prepare_report(input_path: Path, output_dir: Path, max_pages: int = 80) -> P
     else:
         text, visuals, warnings = _prepare_image(input_path, output_dir)
 
+    _annotate_visuals(output_dir, visuals, warnings)
     contact_sheet = _create_contact_sheet(output_dir, visuals, warnings)
     try:
         from domain_router import route_domain
@@ -329,6 +347,7 @@ def prepare_report(input_path: Path, output_dir: Path, max_pages: int = 80) -> P
         "visuals": visuals,
         "visual_overview": contact_sheet,
         "domain_routing": domain_routing,
+        "review_signals": classify_report_signals(text, len(visuals)),
         "warnings": warnings,
         "next_step": "Codex must read the text and visually inspect relevant images before classifying or reviewing the report.",
     }
