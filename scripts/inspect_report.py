@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Prepare a university experiment report for local Codex review.
+"""Prepare a university experiment report for local agent review.
 
 The script extracts text and visual evidence from DOCX, PDF, plain-text,
 Markdown, and image files without calling any network service or model API.
-It writes a manifest that Codex can read before performing semantic review.
+It writes a manifest that the agent can read before performing semantic review.
 """
 
 from __future__ import annotations
@@ -191,7 +191,7 @@ def _prepare_pdf(
         import fitz
     except ImportError as exc:
         raise ReportPreparationError(
-            "PDF preparation requires PyMuPDF. Use Codex's native PDF viewer or install the declared dependency."
+            "PDF preparation requires PyMuPDF. Use your agent's native PDF viewer or install the declared dependency."
         ) from exc
 
     images_dir = output_dir / "images"
@@ -349,7 +349,7 @@ def prepare_report(input_path: Path, output_dir: Path, max_pages: int = 80) -> P
         "domain_routing": domain_routing,
         "review_signals": classify_report_signals(text, len(visuals)),
         "warnings": warnings,
-        "next_step": "Codex must read the text and visually inspect relevant images before classifying or reviewing the report.",
+        "next_step": "The agent must read the text and visually inspect relevant images before classifying or reviewing the report.",
     }
     manifest_path = output_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -396,8 +396,8 @@ def diagnostics() -> dict[str, Any]:
 
 
 def main() -> int:
-    """Parse CLI arguments and prepare one report for Codex review."""
-    parser = argparse.ArgumentParser(description="Prepare a university experiment report for local Codex review.")
+    """Parse CLI arguments and prepare one report for agent review."""
+    parser = argparse.ArgumentParser(description="Prepare a university experiment report for local agent review.")
     parser.add_argument("--input", type=Path, help="Path to a DOCX, PDF, text, Markdown, or image file.")
     parser.add_argument("--output-dir", type=Path, help="Directory for manifest, extracted text, and images.")
     parser.add_argument("--max-pages", type=int, default=80, help="Maximum PDF pages to render (1-500).")

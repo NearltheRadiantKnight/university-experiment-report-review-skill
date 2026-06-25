@@ -87,7 +87,7 @@ def render_report(docx:Path,job_id:str)->dict[str,Any]:
  return {"status":"passed","backend":backend,"attempts":attempts,"pdf":pdf_path.name,"pages":[str(path) for path in pages],"page_count":len(pages),"preview":preview.name if preview else None}
 
 def check_report(source:Path,generated:Path,metadata_path:Path,require_render:bool=False)->tuple[dict[str,Any],Path]:
- metadata=json.loads(metadata_path.read_text(encoding="utf-8")); document=Document(generated); text="\n".join(p.text for p in document.paragraphs); expected=int(metadata.get("addition_count",0)); labels=text.count("【Codex 新增·")
+ metadata=json.loads(metadata_path.read_text(encoding="utf-8")); document=Document(generated); text="\n".join(p.text for p in document.paragraphs); expected=int(metadata.get("addition_count",0)); labels=text.count("【AI 审阅·")
  checks={"docx_opens":True,"source_media_preserved":_media_count(generated)>=_media_count(source),"all_additions_labeled":labels>=expected,"no_unlocated_marker":"未定位内容" not in text,"paragraph_length_ok":all(len(p.text)<=700 for p in document.paragraphs)}
  structural_ok=all(checks.values())
  if "自动质量检查" not in text:

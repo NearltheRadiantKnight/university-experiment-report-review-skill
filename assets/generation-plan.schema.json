@@ -128,7 +128,7 @@
     },
     "appendix_title": {
       "type": "string",
-      "default": "Codex 综合审阅附录",
+      "default": "AI 综合审阅附录",
       "maxLength": 80
     },
     "additions": {

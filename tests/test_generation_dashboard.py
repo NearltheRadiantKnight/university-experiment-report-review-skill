@@ -86,7 +86,7 @@ class GeneratedReportTests(unittest.TestCase):
             self.assertEqual(original_run.font.size.pt, 13)
             self.assertEqual(str(original_run.font.color.rgb), "112233")
             self.assertTrue(original_run.bold)
-            self.assertIn("Codex 新增", inserted.text)
+            self.assertIn("AI 审阅", inserted.text)
             self.assertEqual(str(inserted.runs[0].font.color.rgb), "2F75B5")
             self.assertEqual(inserted.runs[0].font.name, "Microsoft YaHei")
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))

@@ -6,7 +6,7 @@ The package remains one skill because blank-template guidance, completed-report 
 
 ## Local-Only Design
 
-No external model, OCR, storage, or analysis API is used. Codex performs semantic and visual review in the active conversation. Python performs deterministic local extraction, DOCX insertion, metadata registration, and browser delivery.
+No external model, OCR, storage, or analysis API is used. The agent performs semantic and visual review in the active conversation. Python performs deterministic local extraction, DOCX insertion, metadata registration, and browser delivery.
 
 ## Visual Evidence
 
@@ -14,7 +14,7 @@ DOCX media is extracted locally. PDF pages and embedded images are rendered loca
 
 ## Generated Documents and Dashboard
 
-Version 1.1 separates semantic planning from deterministic delivery. Codex writes a generation plan after review. `run_pipeline.py` applies it to the original DOCX, registers metadata, starts a loopback-only Flask dashboard, and opens the browser.
+Version 1.1 separates semantic planning from deterministic delivery. The agent writes a generation plan after review. `run_pipeline.py` applies it to the original DOCX, registers metadata, starts a loopback-only Flask dashboard, and opens the browser.
 
 The server has no upload or model endpoint and only downloads files registered by metadata in the selected output directory. It binds to `127.0.0.1` and is not exposed to the local network.
 
@@ -24,7 +24,7 @@ The original DOCX is never overwritten. Existing runs, fonts, colors, images, ta
 
 ## Interactive Boundary
 
-Semantic classification and plan authorship require Codex judgment. Delivery after the plan exists is deterministic and uses one command. This boundary avoids pretending a local Flask app can invoke Codex without an API.
+Semantic classification and plan authorship require the agent's judgment. Delivery after the plan exists is deterministic and uses one command. This boundary avoids pretending a local Flask app can invoke a model API.
 
 ## Scoring
 

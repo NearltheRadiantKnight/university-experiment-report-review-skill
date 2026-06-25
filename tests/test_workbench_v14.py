@@ -64,7 +64,7 @@ class WorkbenchContractTests(unittest.TestCase):
    self.assertEqual(len(metadata["generated_files"]),1)
    self.assertLessEqual(len(metadata["actions"]),5); self.assertEqual(metadata["estimated_minutes"],15)
    self.assertEqual([item["priority"] for item in metadata["actions"]],["blocker","high","high"])
-   self.assertIn("Codex 综合审阅附录","\n".join(p.text for p in Document(output).paragraphs))
+   self.assertIn("AI 综合审阅附录","\n".join(p.text for p in Document(output).paragraphs))
    client=create_app(root/"out").test_client(); listing=client.get("/api/reports").get_json()["reports"][0]
    self.assertEqual(listing["submission_signal"],"yellow"); self.assertEqual(len(listing["files"]),1)
    response=client.get(listing["screenshots"][0]["preview_url"]); self.assertEqual(response.status_code,200); response.close()

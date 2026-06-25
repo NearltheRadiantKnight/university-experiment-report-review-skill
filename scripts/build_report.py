@@ -80,7 +80,7 @@ def _add_runs(paragraph:Paragraph,addition:dict[str,Any],label_override:str|None
  label=label_override or str(addition.get("label",default_label)).strip() or default_label
  text=str(addition.get("text","") if text_override is None else text_override).strip()
  font=str(addition.get("font_name",DEFAULT_FONT)).strip() or DEFAULT_FONT; size=float(addition.get("font_size_pt",10.5))
- label_run=paragraph.add_run(f"【Codex 新增·{label}】"); _set_run_font(label_run,font,color,size,True)
+ label_run=paragraph.add_run(f"【AI 审阅·{label}】"); _set_run_font(label_run,font,color,size,True)
  if text:
   body=paragraph.add_run(text); _set_run_font(body,font,color,size)
 
@@ -176,7 +176,7 @@ def _add_table(document:Document,headers:list[str],rows:list[list[Any]])->None:
 
 def _append_review_appendix(document:Document,plan:dict[str,Any],actions:list[dict[str,Any]],output_dir:Path,job_id:str,plan_dir:Path)->list[dict[str,Any]]:
  page=document.add_paragraph(); page.add_run().add_break(WD_BREAK.PAGE)
- document.add_heading(str(plan.get("appendix_title","Codex 综合审阅附录")),level=1)
+ document.add_heading(str(plan.get("appendix_title","AI 综合审阅附录")),level=1)
  signal=str(plan.get("submission_signal") or ("red" if plan.get("source_state")=="blank" else "yellow")); time_budget=str(plan.get("time_budget","full"))
  _render_append(document,{"category":"summary","label":"提交状态","text":SIGNAL_LABELS.get(signal,signal)})
  _render_append(document,{"category":"summary","label":"时间预算","text":f"{time_budget} · 预计 {sum(_estimated_minutes(item) for item in actions)} 分钟"})
