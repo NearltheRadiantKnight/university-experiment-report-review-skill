@@ -54,16 +54,16 @@ def _all_paragraphs(document:Document)->list[Paragraph]:
 
 def _ensure_styles(document:Document)->None:
  styles=document.styles
- if "Codex Added" not in styles:
-  style=styles.add_style("Codex Added",WD_STYLE_TYPE.PARAGRAPH)
+ if "Review Added" not in styles:
+  style=styles.add_style("Review Added",WD_STYLE_TYPE.PARAGRAPH)
   style.base_style=styles["Normal"]
   style.paragraph_format.space_before=Pt(4); style.paragraph_format.space_after=Pt(4)
- if "Codex Item" not in styles:
-  style=styles.add_style("Codex Item",WD_STYLE_TYPE.PARAGRAPH)
-  style.base_style=styles["Codex Added"]
+ if "Review Item" not in styles:
+  style=styles.add_style("Review Item",WD_STYLE_TYPE.PARAGRAPH)
+  style.base_style=styles["Review Added"]
   style.paragraph_format.left_indent=Pt(18); style.paragraph_format.first_line_indent=Pt(-12)
 
-def _insert_after(paragraph:Paragraph,style_name:str="Codex Added")->Paragraph:
+def _insert_after(paragraph:Paragraph,style_name:str="Review Added")->Paragraph:
  element=OxmlElement("w:p"); paragraph._p.addnext(element); inserted=Paragraph(element,paragraph._parent)
  try: inserted.style=style_name
  except KeyError: pass
@@ -96,7 +96,7 @@ def _render_after(document:Document,anchor:Paragraph,addition:dict[str,Any])->Pa
  block=str(addition.get("block_type","paragraph")); current=_insert_after(anchor); _add_runs(current,addition)
  if block in {"bullets","checklist"}:
   for item in addition.get("items",[]):
-   current=_insert_after(current,"Codex Item")
+   current=_insert_after(current,"Review Item")
    category=str(addition.get("category","suggestion")); color=CATEGORY_STYLES.get(category,CATEGORY_STYLES["suggestion"])[0]
    run=current.add_run(_item_text(addition,item,block=="checklist")); _set_run_font(run,str(addition.get("font_name",DEFAULT_FONT)),color,float(addition.get("font_size_pt",10.5)))
  elif block=="table":
@@ -113,10 +113,10 @@ def _render_after(document:Document,anchor:Paragraph,addition:dict[str,Any])->Pa
  return current
 
 def _render_append(document:Document,addition:dict[str,Any])->None:
- block=str(addition.get("block_type","paragraph")); paragraph=document.add_paragraph(style="Codex Added"); _add_runs(paragraph,addition)
+ block=str(addition.get("block_type","paragraph")); paragraph=document.add_paragraph(style="Review Added"); _add_runs(paragraph,addition)
  if block in {"bullets","checklist"}:
   for item in addition.get("items",[]):
-   row=document.add_paragraph(style="Codex Item"); color=CATEGORY_STYLES.get(str(addition.get("category")),CATEGORY_STYLES["suggestion"])[0]
+   row=document.add_paragraph(style="Review Item"); color=CATEGORY_STYLES.get(str(addition.get("category")),CATEGORY_STYLES["suggestion"])[0]
    run=row.add_run(_item_text(addition,item,block=="checklist")); _set_run_font(run,DEFAULT_FONT,color,float(addition.get("font_size_pt",10.5)))
  elif block=="table":
   table=document.add_table(rows=1,cols=len(addition["columns"])); _apply_table_style(table)

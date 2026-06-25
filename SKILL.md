@@ -5,8 +5,8 @@ license: MIT
 compatibility: AgentSkills-compatible; tested contracts for Codex CLI, Claude Code, and OpenClaw.
 user-invocable: true
 activation: /university-experiment-report-review-skill
-provenance: {"maintainer":"Codex","version":"1.5.3","created":"2026-06-23","source_references":["User workflow description","OpenClaw official skills documentation"]}
-metadata: {"author":"Codex","version":"1.5.3","created":"2026-06-23","last_reviewed":"2026-06-23","review_interval_days":90,"openclaw":{"emoji":"🧪","requires":{"bins":["python"]}}}
+provenance: {"maintainer":"Codex","version":"1.5.7","created":"2026-06-23","source_references":["User workflow description","OpenClaw official skills documentation"]}
+metadata: {"author":"Codex","version":"1.5.7","created":"2026-06-23","last_reviewed":"2026-06-23","review_interval_days":90,"openclaw":{"emoji":"🧪","requires":{"bins":["python"]}}}
 ---
 # /university-experiment-report-review-skill — 大学生实验报告指导与审阅
 
@@ -185,12 +185,16 @@ Before generation, the plan must pass `scripts/validate_plan.py`:
 Structured additions use `block_type: paragraph | bullets | checklist | table`.
 ## Feedback Continuation
 
-Dashboard feedback is local JSON, not a model API. Current feedback remains inline; current and historical records support `open`, `done`, `skipped`, and `needs-review`, plus editing, action deletion, full-record deletion, and saving.
+Dashboard feedback remains local and report-specific. Feedback actions no longer use status labels: the user either writes a correction/fact, deletes a feedback item that should not be submitted, or clears the current feedback text to rethink it later.
 
-When the user clicks “用反馈改进 Skill”, the Dashboard writes a `skill-improvement-queue/*.skill-improvement.json` request. A local AgentSkills session must:
+Only saving meaningful feedback text records a local `skill-improvement-queue/*.skill-improvement.json` request for a later AgentSkills maintenance session. Deleting feedback and clearing feedback do not trigger skill improvement, because both mean the current feedback should not be used as evidence.
 
-1. Claim the task with `python scripts/skill_improvement_queue.py --queue-dir "<queue>" --claim-next <agent>`.
-2. Read all feedback evidence and separate report-specific corrections from reusable skill defects.
+Personal memory is separate from report feedback. The Dashboard stores cross-document notes in `personal-memory.json` for stable user context such as student information, course names, teacher format requirements, common software versions, and account ownership notes. Treat this memory as user-provided context, not as evidence that a specific report already contains the information.
+
+A local AgentSkills maintenance session must:
+
+1. Claim queued feedback with `python scripts/skill_improvement_queue.py --queue-dir "<queue>" --claim-next <agent>`.
+2. Read feedback evidence and personal memory, separating report-specific corrections from reusable skill defects.
 3. Use `agent-skill-creator` only for reusable, evidence-supported improvements.
 4. Run tests, spec validation, security scan, pipeline checks, and cross-agent checks before installation.
 5. Mark the task completed or failed with `skill_improvement_queue.py`; never silently self-modify or push without validation.

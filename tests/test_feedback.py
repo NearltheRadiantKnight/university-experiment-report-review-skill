@@ -16,11 +16,26 @@ class FeedbackTests(unittest.TestCase):
 
  def test_feedback_round_trip_edit_and_delete(self):
   with tempfile.TemporaryDirectory() as temp:
-   root=Path(temp); job,client=self.create_job(root); payload=client.get(f"/api/reports/{job}/feedback").get_json(); self.assertEqual(payload["actions"][0]["status"],"open")
-   payload["actions"][0]["status"]="done"; payload["actions"][0]["correction"]="已替换清晰截图"; payload["confirmed_context"]={"teacher_rule":"需要完整窗口"}
-   saved=client.post(f"/api/reports/{job}/feedback",json=payload); self.assertEqual(saved.status_code,200)
-   payload["actions"]=[]; self.assertEqual(client.put(f"/api/reports/{job}/feedback",json=payload).status_code,200); self.assertEqual(client.get(f"/api/reports/{job}/feedback").get_json()["actions"],[])
-   self.assertEqual(client.delete(f"/api/reports/{job}/feedback").status_code,200); self.assertFalse((root/f"{job}.feedback.json").exists())
+   root=Path(temp); job,client=self.create_job(root); payload=client.get(f"/api/reports/{job}/feedback").get_json(); self.assertNotIn("status", payload["actions"][0])
+   payload["actions"][0]["correction"]="已替换清晰截图"; payload["confirmed_context"]={"teacher_rule":"需要完整窗口"}
+   saved=client.post(f"/api/reports/{job}/feedback",json=payload); self.assertEqual(saved.status_code,200); self.assertEqual(saved.get_json()["learning_status"],"queued")
+   payload["actions"]=[]; updated=client.put(f"/api/reports/{job}/feedback",json=payload); self.assertEqual(updated.status_code,200); self.assertIsNone(updated.get_json()["learning_request_id"]); self.assertEqual(client.get(f"/api/reports/{job}/feedback").get_json()["actions"],[])
+   deleted=client.delete(f"/api/reports/{job}/feedback"); self.assertEqual(deleted.status_code,200); self.assertEqual(deleted.get_json()["learning_status"],"not-needed"); self.assertFalse((root/f"{job}.feedback.json").exists())
+   auto=root/"skill-improvement-queue"/"auto-feedback-learning.skill-improvement.json"; self.assertTrue(auto.is_file()); events=json.loads(auto.read_text(encoding="utf-8"))["events"]; self.assertEqual([item["type"] for item in events[-1:]], ["feedback_saved"])
+
+ def test_personal_memory_round_trip(self):
+  with tempfile.TemporaryDirectory() as temp:
+   root=Path(temp); _job,client=self.create_job(root)
+   empty=client.get("/api/personal-memory")
+   self.assertEqual(empty.status_code,200)
+   self.assertEqual(empty.get_json()["notes"],"")
+   notes="\u5b66\u751f\uff1a\u5218\u601d\u5a55\uff1b\u8bfe\u7a0b\uff1a\u8f6f\u4ef6\u6d4b\u8bd5"
+   saved=client.put("/api/personal-memory",json={"notes":notes})
+   self.assertEqual(saved.status_code,200)
+   self.assertEqual(saved.get_json()["notes"],notes)
+   loaded=client.get("/api/personal-memory").get_json()
+   self.assertEqual(loaded["notes"],notes)
+   self.assertTrue((root/"personal-memory.json").is_file())
 
  def test_preferences_and_skill_improvement_queue(self):
   with tempfile.TemporaryDirectory() as temp:
@@ -49,12 +64,15 @@ class FeedbackTests(unittest.TestCase):
    feedback=client.get(f"/api/reports/{job}/feedback").get_json()
    self.assertEqual(client.post(f"/api/reports/{job}/feedback",json=feedback).status_code,200)
    self.assertEqual(len(client.get("/api/feedback").get_json()["feedback"]),1)
-   queued=client.post("/api/skill-improvement-requests",json={"job_ids":[]})
+   queued=client.get("/api/skill-improvement-requests")
    self.assertEqual(queued.status_code,200)
-   self.assertIn("activation_text",queued.get_json())
+   self.assertFalse(any(item.get("request_id")=="auto-feedback-learning" for item in queued.get_json()["requests"]))
    download=client.get(f"/api/reports/{job}/download/annotated"); self.assertEqual(download.status_code,200); download.close()
    with patch("dashboard_server.render_report",return_value={"status":"unavailable","backend":None,"attempts":[],"pdf":None,"pages":[],"preview":None}):
     self.assertEqual(client.post(f"/api/reports/{job}/render").status_code,200)
+   cleared=client.post(f"/api/reports/{job}/feedback/clear")
+   self.assertEqual(cleared.status_code,200)
+   self.assertEqual(cleared.get_json()["learning_status"],"not-needed")
    self.assertEqual(client.delete(f"/api/reports/{job}/feedback").status_code,200)
 
 if __name__=="__main__": unittest.main()

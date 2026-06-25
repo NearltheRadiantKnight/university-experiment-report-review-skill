@@ -12,20 +12,13 @@ A successful backend produces a PDF, page PNGs, and a contact-sheet preview. Str
 
 The reviewing agent must inspect every rendered page image when status is `passed`. The deterministic script cannot decide aesthetics, overlap meaning, or screenshot legibility by itself.
 
-## Feedback
+## Feedback and Personal Memory
 
-The Dashboard GET/POST route `/api/reports/<job_id>/feedback` accepts only bounded JSON on loopback. Actions support `open`, `done`, `needs-review`, and `skipped`. Confirmed context and corrections become a downloadable feedback JSON.
+The Dashboard has two separate user inputs:
 
-On a later turn:
+- Report feedback: action-level corrections for the current generated report. These records can be edited, deleted, and saved from current or historical feedback dialogs.
+- Personal memory: cross-document notes such as student information, course names, teacher requirements, software versions, and account ownership. This is stored separately in `personal-memory.json` and is not evidence that one report already contains that information.
 
-1. Read the original report, latest metadata, and feedback JSON.
-2. Treat confirmed context as user evidence.
-3. Re-check only affected findings and any dependencies.
-4. Produce a new immutable job; never overwrite the old report or metadata.
-## Dashboard CRUD and local-agent improvement
+Every feedback save, update, or deletion automatically updates the local skill-improvement queue. The student-facing page should describe this as being recorded for later improvement, and should not show machine file names, debug fields, queue internals, or raw metadata.
 
-Current feedback stays inline. Historical feedback opens in a modal. Both editors can change statuses and corrections, remove individual actions, delete the whole feedback record, and save through loopback-only endpoints.
-
-The “用反馈改进 Skill” button creates a local `skill-improvement-queue` request and prompt. It does not call a remote API or let browser JavaScript edit source files. A local AgentSkills-compatible agent claims the request, invokes agent-skill-creator, filters out report-specific corrections, validates reusable changes, installs them locally, and records completion.
-
-Generation preferences are stored in `generation-preferences.json`; the Agent reads them and still confirms them in conversation. Render status is one of `not-run`, `passed`, `permission-required`, `unavailable`, or `failed`, with retry and preview behavior defined in SKILL.md.
+When a local maintenance agent consumes the queue, it must separate one-report corrections from reusable skill defects, use `agent-skill-creator` only for reusable changes, and run the full validation suite before installation or publishing.
