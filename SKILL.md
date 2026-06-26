@@ -106,6 +106,7 @@ python scripts/domain_router.py --input "<准备目录>/document.txt"
 - 完成度：必填章节、任务、问题、表格、截图和结论是否齐全。
 - 任务匹配度：内容是否真正回答实验要求，而不是只有背景知识或无关截图。
 - 技术正确性：命令、配置、公式、数据、现象解释、因果关系和结论是否正确。
+- 软件测试分支映射：没有教师评分标准或模板明确要求时，不强制要求学生逐条说明每个分支由哪个 JUnit 方法覆盖；若目标方法覆盖率数据、JUnit 通过证据和用例代码已经能支撑结论，此类映射说明只能作为可选润色。只有覆盖证据不清、用例与目标方法不对应，或教师要求逐项说明时，才列为必要修改。
 - 可复现性：环境、参数、步骤顺序、关键输入和版本是否足以让他人复现。
 - 证据与截图：截图是否清晰、完整、可读、与步骤相邻、能证明目标，是否暴露敏感信息。
 - 结果与分析：是否解释结果为何出现、是否处理异常、是否把现象与原理连接起来。
@@ -201,19 +202,22 @@ Before generation, the plan must pass `scripts/validate_plan.py`:
 Structured additions use `block_type: paragraph | bullets | checklist | table`.
 ## Feedback Continuation
 
-Dashboard feedback remains local and report-specific. Feedback actions no longer use status labels: the user either writes a correction/fact, deletes a feedback item that should not be submitted, or clears the current feedback text to rethink it later.
+Dashboard feedback uses a four-layer lifecycle instead of directly editing the skill.
 
-Only saving meaningful feedback text records a local `skill-improvement-queue/*.skill-improvement.json` request for a later AgentSkills maintenance session. Deleting feedback and clearing feedback do not trigger skill improvement, because both mean the current feedback should not be used as evidence.
+1. Raw feedback records store the user's exact text with only `active` or `revoked` status.
+2. AI interpretation records structure that text as `report_specific`, `reusable_skill_rule`, `personal_preference`, or `needs_clarification`.
+3. Modification records exist only for reusable skill rules. Their statuses are `drafted`, `needs_revision`, `validated`, `applied`, `revert_drafted`, `revert_needs_revision`, or `reverted`; modification records may not end as failed.
+4. Skill files (`SKILL.md`, references, assets, scripts, dashboard code, tests) change only when an applied modification record has passed validation and installation.
 
-Personal memory is separate from report feedback. The Dashboard stores cross-document notes in `personal-memory.json` for stable user context such as student information, course names, teacher format requirements, common software versions, and account ownership notes. Treat this memory as user-provided context, not as evidence that a specific report already contains the information.
+Saving feedback immediately writes raw feedback, drafts an interpretation record, and appends lifecycle events. Clearing or deleting feedback revokes the raw feedback. If revoked feedback already produced an applied skill modification, the next Agent run must draft and validate a reverse modification instead of silently deleting history.
 
-A local AgentSkills maintenance session must:
+Applying a reusable feedback rule to the skill must never consume, blank, or hide the original feedback. Historical feedback remains visible with its raw text, interpretation scope, modification id, and current status such as `interpreted`, `applied`, or `reverted`. When a follow-up report job is generated from feedback, preserve or carry forward the relevant lifecycle records so the Dashboard history still explains which feedback affected the result.
 
-1. Claim queued feedback with `python scripts/skill_improvement_queue.py --queue-dir "<queue>" --claim-next <agent>`.
-2. Read feedback evidence and personal memory, separating report-specific corrections from reusable skill defects.
-3. Use `agent-skill-creator` only for reusable, evidence-supported improvements.
-4. Run tests, spec validation, security scan, pipeline checks, and cross-agent checks before installation.
-5. Mark the task completed or failed with `skill_improvement_queue.py`; never silently self-modify or push without validation.
+History actions must operate by stable `feedback_id`, not by the original report job metadata. A migrated or follow-up Dashboard may no longer contain the old job's metadata file, but clearing or deleting historical feedback must still revoke the raw feedback and draft any required revert modification.
+
+Dashboard code performs only deterministic local steps. Any AI interpretation, skill-file edit, validation repair, install, or revert happens during the next Agent run, which must scan `feedback-lifecycle/events.jsonl` and continue automatically until it reaches a user-confirmation boundary or completes the lifecycle.
+
+Personal memory remains separate in `personal-memory.json`; treat it as stable user-provided context, not evidence that a specific report already contains the information.
 
 Report-specific feedback still creates a new immutable report job rather than overwriting an old report.
 

@@ -1,4 +1,4 @@
-# Render QA and Feedback Continuation
+﻿# Render QA and Feedback Continuation
 
 ## Render backends
 
@@ -16,9 +16,16 @@ The reviewing agent must inspect every rendered page image when status is `passe
 
 The Dashboard has two separate user inputs:
 
-- Report feedback: action-level corrections for the current generated report. These records can be edited, deleted, and saved from current or historical feedback dialogs.
-- Personal memory: cross-document notes such as student information, course names, teacher requirements, software versions, and account ownership. This is stored separately in `personal-memory.json` and is not evidence that one report already contains that information.
+- Report feedback: action-level corrections for the current generated report.
+- Personal memory: cross-document notes such as student information, course names, teacher requirements, software versions, and account ownership.
 
-Every feedback save, update, or deletion automatically updates the local skill-improvement queue. The student-facing page should describe this as being recorded for later improvement, and should not show machine file names, debug fields, queue internals, or raw metadata.
+Report feedback follows a four-layer lifecycle:
 
-When a local maintenance agent consumes the queue, it must separate one-report corrections from reusable skill defects, use `agent-skill-creator` only for reusable changes, and run the full validation suite before installation or publishing.
+1. Raw feedback stores the user's exact words. Feedback status is only `active` or `revoked`.
+2. AI interpretation records convert raw feedback into structured meaning during an Agent run. Scopes are `report_specific`, `reusable_skill_rule`, `personal_preference`, and `needs_clarification`.
+3. Modification records are generated only for reusable skill rules. Valid statuses are `drafted`, `needs_revision`, `validated`, `applied`, `revert_drafted`, `revert_needs_revision`, and `reverted`. They never use a failed terminal status; validation problems move the record to a revision state.
+4. Skill files change only through validated modification records.
+
+Every feedback save, update, clear, or delete writes deterministic local lifecycle records and events. The Dashboard must not call an external model or silently edit skill files. The next Agent run scans `feedback-lifecycle/events.jsonl`, completes interpretation, generates or revises modification records, validates, installs, or drafts reversions automatically. If user confirmation or elevated permission is required, the Agent asks in that same session.
+
+Clearing or deleting feedback revokes it. If it has not affected skill files, subsequent lifecycle records are revoked. If it has already been applied, the Agent must create and validate a reverse modification record.

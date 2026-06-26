@@ -6,10 +6,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 from flask import Flask,abort,jsonify,render_template,request,send_file
+from feedback_lifecycle import list_events,list_feedback,list_interpretations,list_modifications,revoke_feedback,revoke_job_feedback,sync_feedback_payload
 from qa_report import render_report
 ROOT=Path(__file__).resolve().parents[1]; TEMPLATE_DIR=ROOT/"assets"/"dashboard"/"templates"; STATIC_DIR=ROOT/"assets"/"dashboard"/"static"
 DASHBOARD_API_VERSION=4
-DASHBOARD_ASSET_VERSION="1.5.7"
+DASHBOARD_ASSET_VERSION="1.5.8"
 PRIORITY_LABELS={"blocker":"阻塞","high":"高","medium":"中","low":"低","optional":"可选"}
 
 def _output_dir_id(output_dir:Path)->str:
@@ -133,13 +134,7 @@ def _validate_preferences(payload:Any)->dict[str,Any]:
 def _improvement_dir(output_dir:Path)->Path: return output_dir/"skill-improvement-queue"
 
 def _improvement_records(output_dir:Path)->list[dict[str,Any]]:
- directory=_improvement_dir(output_dir); records=[]
- if not directory.is_dir(): return records
- for path in sorted(directory.glob("*.skill-improvement.json"),reverse=True):
-  try: data=json.loads(path.read_text(encoding="utf-8"))
-  except (OSError,json.JSONDecodeError): continue
-  if isinstance(data,dict): records.append(data)
- return records
+ return [{"request_id":"feedback-lifecycle","status":"ready_for_agent","mode":"feedback-lifecycle","feedback_count":len(list_feedback(output_dir)),"interpretation_count":len(list_interpretations(output_dir)),"modification_count":len(list_modifications(output_dir)),"event_count":len(list_events(output_dir)),"activation_text":f"process feedback lifecycle in {output_dir}"}]
 
 
 def _auto_improvement_path(output_dir:Path)->Path: return _improvement_dir(output_dir)/"auto-feedback-learning.skill-improvement.json"
@@ -156,22 +151,57 @@ def _record_auto_improvement(output_dir:Path,event_type:str,job_id:str,feedback:
  events.append(event); events=events[-100:]
  saved_feedback=_feedback_records(output_dir)
  activation_text=f"/agent-skill-creator process local feedback task {path}"
- record={"request_id":request_id,"status":"pending-agent","created_at":record.get("created_at") or now,"updated_at":now,"skill":"university-experiment-report-review-skill","mode":"auto-feedback-learning","preferences":_load_preferences(output_dir),"feedback":saved_feedback,"events":events,"instructions":["Use agent-skill-creator locally.","This file is updated automatically whenever Dashboard feedback is created, edited, or deleted.","Separate report-specific corrections from reusable skill rules.","Modify the skill only for reusable patterns supported by repeated or high-confidence feedback evidence.","Do not call external APIs; validate, security scan, and cross-agent check before installation."],"activation_text":activation_text}
+ record={"request_id":request_id,"status":"ready_for_agent","created_at":record.get("created_at") or now,"updated_at":now,"skill":"university-experiment-report-review-skill","mode":"auto-feedback-learning","preferences":_load_preferences(output_dir),"feedback":saved_feedback,"events":events,"instructions":["Use agent-skill-creator locally.","This file is updated automatically whenever Dashboard feedback is created, edited, or deleted.","Separate report-specific corrections from reusable skill rules.","Modify the skill only for reusable patterns supported by repeated or high-confidence feedback evidence.","Do not call external APIs; validate, security scan, and cross-agent check before installation."],"activation_text":activation_text}
  path.write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding="utf-8")
  prompt_path=directory/f"{request_id}.prompt.md"; prompt_path.write_text("# Auto Feedback Learning Task\n\n"+activation_text+"\n\nRead the adjacent JSON evidence and convert reusable feedback patterns into safe skill improvements.\n",encoding="utf-8")
  record["queue_path"]=str(path); record["prompt_path"]=str(prompt_path)
  return record
 
+def _feedback_action_key(job_id:Any,action:dict[str,Any])->tuple[str,str,str,str]:
+ text=str(action.get("correction") or action.get("note") or action.get("raw_text") or "").strip()
+ return (str(job_id),str(action.get("action_id")),str(action.get("label","")).strip(),text)
+
+def _feedback_lifecycle_records(output_dir:Path)->list[dict[str,Any]]:
+ interpretations={str(item.get("feedback_id")):item for item in list_interpretations(output_dir)}
+ modifications:dict[str,dict[str,Any]]={}
+ for item in list_modifications(output_dir):
+  feedback_id=str(item.get("source_feedback_id") or "")
+  if feedback_id: modifications[feedback_id]=item
+ records=[]
+ for item in list_feedback(output_dir):
+  feedback_id=str(item.get("feedback_id"))
+  interpretation=interpretations.get(feedback_id,{})
+  modification=modifications.get(feedback_id,{})
+  status=str(modification.get("status") or interpretation.get("status") or item.get("status") or "active")
+  action={"action_id":item.get("action_id"),"label":str(item.get("label","")).strip(),"priority":"medium","note":"","correction":str(item.get("raw_text","")).strip(),"legacy_status":str(item.get("status","")),"status":status,"feedback_id":feedback_id,"interpretation_id":interpretation.get("interpretation_id"),"interpretation_scope":interpretation.get("scope"),"modification_id":modification.get("modification_id"),"modification_status":modification.get("status")}
+  records.append({"job_id":item.get("job_id"),"source_name":item.get("source_name"),"updated_at":item.get("updated_at"),"confirmed_context":{},"history_source":"feedback-pool","feedback_id":feedback_id,"actions":[action]})
+ return sorted(records,key=lambda record:str(record.get("updated_at") or ""),reverse=True)
+
 def _feedback_records(output_dir:Path)->list[dict[str,Any]]:
  records=[]
  if not output_dir.is_dir(): return records
+ lifecycle_records=_feedback_lifecycle_records(output_dir)
+ lifecycle_actions={_feedback_action_key(record.get("job_id"),action):action for record in lifecycle_records for action in record.get("actions",[]) if isinstance(action,dict)}
+ seen=set()
  for path in sorted(output_dir.glob("*.feedback.json"),reverse=True):
   try: data=json.loads(path.read_text(encoding="utf-8"))
   except (OSError,json.JSONDecodeError): continue
   if not isinstance(data,dict): continue
+  for action in data.get("actions",[]):
+   if not isinstance(action,dict): continue
+   key=_feedback_action_key(data.get("job_id"),action)
+   lifecycle=lifecycle_actions.get(key)
+   if lifecycle:
+    for field in ("status","feedback_id","interpretation_id","interpretation_scope","modification_id","modification_status"):
+     if lifecycle.get(field) is not None: action[field]=lifecycle.get(field)
+   seen.add(key)
   records.append(data)
+ for record in lifecycle_records:
+  action=(record.get("actions") or [{}])[0]
+  key=_feedback_action_key(record.get("job_id"),action if isinstance(action,dict) else {})
+  if key not in seen:
+   records.append(record)
  return records
-
 def _default_feedback(metadata:dict[str,Any])->dict[str,Any]:
  actions=[]
  for index,action in enumerate(metadata.get("actions",[]),1): actions.append({"action_id":index,"label":str(action.get("label",f"行动 {index}")),"priority":str(action.get("priority","medium")),"priority_label":str(action.get("priority_label",PRIORITY_LABELS.get(str(action.get("priority","medium")),"中"))),"note":"","correction":""})
@@ -216,9 +246,27 @@ def create_app(output_dir:Path)->Flask:
  def reports()->Any: return jsonify({"reports":_metadata_records(resolved)})
  @app.get("/api/feedback")
  def feedback_list()->Any: return jsonify({"feedback":_feedback_records(resolved)})
+ @app.get("/api/feedback-pool")
+ def feedback_pool()->Any: return jsonify({"feedback":list_feedback(resolved)})
+ @app.get("/api/feedback-interpretations")
+ def feedback_interpretations()->Any: return jsonify({"interpretations":list_interpretations(resolved)})
+ @app.get("/api/skill-modifications")
+ def skill_modifications()->Any: return jsonify({"modifications":list_modifications(resolved)})
+ @app.get("/api/feedback-lifecycle")
+ def feedback_lifecycle()->Any: return jsonify({"events":list_events(resolved)})
 
  @app.get("/api/personal-memory")
  def personal_memory()->Any: return jsonify(_load_personal_memory(resolved))
+ @app.post("/api/feedback/<feedback_id>/clear")
+ def clear_feedback_record(feedback_id:str)->Any:
+  revoked=revoke_feedback(resolved,feedback_id,"feedback_cleared")
+  if not revoked: abort(404)
+  return jsonify({"ok":True,"feedback":{"job_id":revoked.get("job_id"),"source_name":revoked.get("source_name"),"updated_at":revoked.get("updated_at"),"confirmed_context":{},"actions":[]},"learning_status":"revoked","lifecycle":{"ok":True,"revoked":[revoked],"revoked_count":1}})
+ @app.delete("/api/feedback/<feedback_id>")
+ def delete_feedback_record(feedback_id:str)->Any:
+  revoked=revoke_feedback(resolved,feedback_id,"feedback_deleted")
+  if not revoked: abort(404)
+  return jsonify({"ok":True,"deleted":True,"feedback":{"job_id":revoked.get("job_id"),"source_name":revoked.get("source_name"),"updated_at":revoked.get("updated_at"),"confirmed_context":{},"actions":[]},"learning_status":"revoked","lifecycle":{"ok":True,"revoked":[revoked],"revoked_count":1}})
  @app.put("/api/personal-memory")
  def save_personal_memory()->Any: return jsonify({"ok":True,**_save_personal_memory(resolved,request.get_json(silent=True))})
  @app.get("/api/generation-preferences")
@@ -236,7 +284,7 @@ def create_app(output_dir:Path)->Flask:
   if not feedback: abort(400,"No saved feedback is available.")
   request_id=datetime.now().strftime("%Y%m%d-%H%M%S-%f"); directory=_improvement_dir(resolved); directory.mkdir(parents=True,exist_ok=True)
   activation_text=f"/agent-skill-creator process local feedback task {directory/f'{request_id}.skill-improvement.json'}"
-  record={"request_id":request_id,"status":"pending-agent","created_at":datetime.now().astimezone().isoformat(timespec="seconds"),"skill":"university-experiment-report-review-skill","preferences":_load_preferences(resolved),"feedback":feedback,"instructions":["Use agent-skill-creator locally.","Separate report-specific corrections from reusable skill rules.","Modify the skill only for reusable patterns supported by feedback evidence.","Run tests, validation, security scan, and cross-agent checks before installation."],"activation_text":activation_text}
+  record={"request_id":request_id,"status":"ready_for_agent","created_at":datetime.now().astimezone().isoformat(timespec="seconds"),"skill":"university-experiment-report-review-skill","preferences":_load_preferences(resolved),"feedback":feedback,"instructions":["Use agent-skill-creator locally.","Separate report-specific corrections from reusable skill rules.","Modify the skill only for reusable patterns supported by feedback evidence.","Run tests, validation, security scan, and cross-agent checks before installation."],"activation_text":activation_text}
   path=directory/f"{request_id}.skill-improvement.json"; path.write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding="utf-8"); prompt_path=directory/f"{request_id}.prompt.md"; prompt_path.write_text("# Local Skill Improvement Task\n\n"+activation_text+"\n\nRead the adjacent JSON evidence and process only reusable improvements.\n",encoding="utf-8"); return jsonify({"ok":True,"request":record,"queue_path":str(path),"prompt_path":str(prompt_path),"activation_text":activation_text})
  @app.get("/api/reports/<job_id>/metadata")
  def report_metadata(job_id:str)->Any: return jsonify(_public_record(_load_metadata(resolved,job_id),resolved))
@@ -270,18 +318,17 @@ def create_app(output_dir:Path)->Flask:
  @app.post("/api/reports/<job_id>/feedback")
  def save_feedback(job_id:str)->Any:
   metadata=_load_metadata(resolved,job_id); feedback=_validate_feedback(request.get_json(silent=True),metadata); path=_feedback_path(resolved,job_id); temp=path.with_suffix(".tmp"); temp.write_text(json.dumps(feedback,ensure_ascii=False,indent=2),encoding="utf-8"); temp.replace(path)
-  meaningful=any((item.get("correction") or item.get("note")) for item in feedback.get("actions",[]))
-  learning=_record_auto_improvement(resolved,"feedback_saved",job_id,feedback=feedback) if meaningful else {"request_id":None}
-  return jsonify({"ok":True,"feedback":feedback,"learning_status":"queued" if meaningful else "not-needed","learning_request_id":learning.get("request_id")})
+  lifecycle=sync_feedback_payload(resolved,feedback,"feedback_saved")
+  return jsonify({"ok":True,"feedback":feedback,"learning_status":lifecycle.get("lifecycle_status"),"lifecycle":lifecycle})
  @app.delete("/api/reports/<job_id>/feedback")
  def delete_feedback(job_id:str)->Any:
-  metadata=_load_metadata(resolved,job_id); path=_feedback_path(resolved,job_id)
-  if path.is_file(): path.unlink()
-  return jsonify({"ok":True,"deleted":True,"learning_status":"not-needed"})
+  metadata=_load_metadata(resolved,job_id); revoke=revoke_job_feedback(resolved,job_id,"feedback_deleted")
+  feedback=_clear_feedback(resolved,metadata)
+  return jsonify({"ok":True,"deleted":True,"feedback":feedback,"learning_status":"revoked","lifecycle":revoke})
  @app.post("/api/reports/<job_id>/feedback/clear")
  def clear_feedback(job_id:str)->Any:
-  metadata=_load_metadata(resolved,job_id); feedback=_clear_feedback(resolved,metadata)
-  return jsonify({"ok":True,"feedback":feedback,"learning_status":"not-needed"})
+  metadata=_load_metadata(resolved,job_id); revoke=revoke_job_feedback(resolved,job_id,"feedback_cleared"); feedback=_clear_feedback(resolved,metadata)
+  return jsonify({"ok":True,"feedback":feedback,"learning_status":"revoked","lifecycle":revoke})
  @app.get("/api/reports/<job_id>/feedback/download")
  def download_feedback(job_id:str)->Any:
   metadata=_load_metadata(resolved,job_id); path=_feedback_path(resolved,job_id)
@@ -290,9 +337,9 @@ def create_app(output_dir:Path)->Flask:
  @app.put("/api/reports/<job_id>/feedback")
  def replace_feedback(job_id:str)->Any:
   metadata=_load_metadata(resolved,job_id); feedback=_validate_feedback(request.get_json(silent=True),metadata); path=_feedback_path(resolved,job_id); temp=path.with_suffix(".tmp"); temp.write_text(json.dumps(feedback,ensure_ascii=False,indent=2),encoding="utf-8"); temp.replace(path)
-  meaningful=any((item.get("correction") or item.get("note")) for item in feedback.get("actions",[]))
-  learning=_record_auto_improvement(resolved,"feedback_updated",job_id,feedback=feedback) if meaningful else {"request_id":None}
-  return jsonify({"ok":True,"feedback":feedback,"learning_status":"queued" if meaningful else "not-needed","learning_request_id":learning.get("request_id")})
+  lifecycle=sync_feedback_payload(resolved,feedback,"feedback_updated")
+  if not lifecycle.get("saved_count"): revoke_job_feedback(resolved,job_id,"feedback_updated_empty")
+  return jsonify({"ok":True,"feedback":feedback,"learning_status":lifecycle.get("lifecycle_status"),"lifecycle":lifecycle})
  return app
 
 def main()->int:

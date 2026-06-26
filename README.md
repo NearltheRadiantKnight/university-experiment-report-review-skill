@@ -1,4 +1,4 @@
-# University Experiment Report Review Skill
+﻿# University Experiment Report Review Skill
 
 本地分析大学实验报告，自动选择领域适配包，并生成一份整合交付物：保留原格式的彩色批注 DOCX，以及仅展示必要信息的环回 Dashboard。空白模板生成执行指导；部分完成或已完成报告生成证据化修改建议。原始 DOCX 不覆盖，不调用外部模型 API、远程 OCR 或云端文档处理。
 
@@ -80,7 +80,14 @@ python scripts/domain_router.py --input "<准备目录>/document.txt"
 
 ## Feedback Loop
 
-当前反馈保留在结果页；历史反馈通过弹窗查看。两者都可修改状态、删除行动、删除整份记录和保存。点击“用反馈改进 Skill”会创建本地智能体任务队列；Agent 使用 agent-skill-creator 仅吸收可复用问题，并在验证后更新本机 Skill。
+Dashboard feedback is stored as a four-layer local lifecycle:
+
+1. Raw feedback keeps the user's exact text as `active` or `revoked`.
+2. Interpretation records are drafted immediately and completed by the next Agent run.
+3. Modification records are created only for reusable skill rules; they can be revised, validated, applied, reverted, or revised again, but they do not have a failed terminal state.
+4. Skill files change only through validated modification records.
+
+Saving, clearing, or deleting feedback writes lifecycle events immediately. The next Agent run scans those events and automatically advances interpretation, report-specific regeneration, reusable rule changes, validation, install, or revert. If meaning or permissions are unclear, the Agent asks in that session.
 
 ## Quality Gates
 
@@ -99,3 +106,4 @@ python scripts/agent_compat.py --platform all
 python scripts/validate_plan.py assets/execution-plan.example.json
 python scripts/validate_plan.py assets/revision-plan.example.json
 ```
+

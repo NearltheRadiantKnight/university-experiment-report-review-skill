@@ -1,4 +1,4 @@
-# university-experiment-report-review-skill
+﻿# university-experiment-report-review-skill
 
 ## Purpose（技能用途）
 
@@ -286,6 +286,10 @@ Generation Plan 的标准 Schema。
 
 Before generation, confirm one of `15m`, `1h`, `half_day`, or `full`; use `full` only for non-interactive fallback. Produce one user-facing annotated DOCX with a consolidated review appendix. Treat local quality JSON and render assets as machine data. The dashboard defaults to a traffic-light verdict, no more than five budgeted actions, screenshot evidence cards, and the main DOCX download; deeper checks remain collapsed. Review `manifest.json.review_signals` as candidates and visually verify false-completion, contamination, and screenshot retake findings.
 
-## Feedback Improvement Queue
+## Feedback Lifecycle
 
-Current and historical feedback are editable local records. When a dashboard request points to `skill-improvement-queue`, claim it with `scripts/skill_improvement_queue.py`, use agent-skill-creator only for reusable evidence-backed defects, run every release gate, then mark the request complete or failed. Read `generation-preferences.json` before generation and confirm time budget, review depth, review focus, and output mode with the user.
+Current and historical feedback are editable local records, but they no longer directly form a pending improvement queue. The dashboard writes four-layer lifecycle data: raw feedback (`active` or `revoked`), AI interpretation drafts, modification records, and actual skill files.
+
+On each Agent run, scan `feedback-lifecycle/events.jsonl` and advance every `ready_for_agent` event automatically. Complete AI interpretation, separate report-specific corrections from reusable skill rules, draft modification records only for reusable rules, validate changes, install validated changes, and draft reversions for revoked feedback that already reached `applied`.
+
+Modification records may be `drafted`, `needs_revision`, `validated`, `applied`, `revert_drafted`, `revert_needs_revision`, or `reverted`; do not use a failed terminal state. If validation does not pass, continue revising or ask the user only when confirmation, missing facts, or permission is required. Read `generation-preferences.json` before generation and confirm time budget, review depth, review focus, and output mode with the user.
