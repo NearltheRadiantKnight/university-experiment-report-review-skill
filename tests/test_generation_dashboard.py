@@ -21,9 +21,7 @@ from dashboard_launcher import API_VERSION, ASSET_VERSION
 
 
 def file_hash(path: Path) -> str:
-    """Return a stable SHA-256 digest for immutability assertions."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
-
 
 def create_source(path: Path) -> None:
     """Create a styled source DOCX with stable review anchors."""
@@ -135,7 +133,7 @@ class GeneratedReportTests(unittest.TestCase):
             health = client.get("/api/health").get_json()
             self.assertEqual(health["service"], "university-experiment-report-dashboard")
             self.assertEqual(health["api_version"], 4)
-            self.assertEqual(health["asset_version"], "1.5.7")
+            self.assertEqual(health["asset_version"], "1.5.11")
             self.assertTrue(health["output_dir_id"])
             listing = client.get("/api/reports")
             self.assertEqual(listing.status_code, 200)
@@ -148,6 +146,39 @@ class GeneratedReportTests(unittest.TestCase):
             download.close()
             self.assertEqual(client.get("/api/reports/not-valid/download").status_code, 404)
 
+    def test_actions_strengths_and_examples_are_split_for_dashboard(self) -> None:
+        """Dashboard priority actions exclude strengths; examples stay in DOCX-only content."""
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            source = root / "completed.docx"
+            plan = root / "plan.json"
+            output_dir = root / "outputs"
+            create_source(source)
+            plan.write_text(
+                json.dumps(
+                    {
+                        "report_kind": "revision",
+                        "source_state": "completed",
+                        "summary": "已完成，少量润色。",
+                        "verdict": "小修后可提交",
+                        "additions": [
+                            {"anchor_text": "实验结果", "category": "suggestion", "label": "补充截图核对", "text": "提交前核对截图是否清晰。"},
+                            {"anchor_text": "实验结论", "category": "praise", "label": "结论优点", "text": "结论能对应实验结果。"},
+                            {"anchor_text": "实验结论", "category": "example", "label": "参考写法", "text": "可在 Word 中参考这一句表达。"},
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            output_path, metadata_path = build_report(source, plan, output_dir)
+            generated_text = "\n".join(paragraph.text for paragraph in Document(output_path).paragraphs)
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+
+            self.assertEqual([item["label"] for item in metadata["actions"]], ["补充截图核对"])
+            self.assertEqual([item["label"] for item in metadata["strengths"]], ["结论优点", "参考写法"])
+            self.assertIn("【AI 审阅·参考写法】", generated_text)
 
 class DashboardFrontendTests(unittest.TestCase):
     def test_progressive_workbench_avoids_background_refresh_and_html_injection(self) -> None:
@@ -162,8 +193,11 @@ class DashboardFrontendTests(unittest.TestCase):
         self.assertIn("openGenerationSettings", script)
         self.assertNotIn("queueSkillImprovement", script)
         self.assertNotIn("skillImproveBtn", script)
+        self.assertIn("withdraw-feedback", script)
         self.assertIn("delete-feedback", script)
-        self.assertIn("clear-feedback", script)
+        self.assertNotIn("clear-feedback", script)
+        self.assertNotIn("delete-action-btn", script)
+        self.assertNotIn("撤回整份反馈", script)
         self.assertNotIn("feedback-status", script)
         self.assertIn("retry-render", script)
         self.assertIn("dirtyEditors", script)
@@ -174,26 +208,31 @@ class DashboardFrontendTests(unittest.TestCase):
         self.assertIn("\\u5f85\\u786e\\u8ba4", script)
         self.assertNotIn("\u4e0b\u8f7d\u53cd\u9988 JSON", script)
         self.assertNotIn("feedback-download", script)
-        self.assertIn('remove.type="button"', script)
+        self.assertIn('withdraw.type="button"', script)
         self.assertIn('close.type="button"', script)
         self.assertIn('aria-label","\u5173\u95ed\u5f39\u7a97"', script)
         self.assertIn('role","dialog"', script)
         self.assertIn('aria-modal","true"', script)
         self.assertIn('showRender=status==="passed"||status==="failed"||status==="permission-required"||hasPreview', script)
+        self.assertIn("hiddenFrontCategories", script)
+        self.assertIn("hidden_by_active_feedback", script)
+        self.assertNotIn("保留优点与参考写法", script)
+        self.assertNotIn("参考写法", script)
         self.assertNotIn("\u6e32\u67d3\u5668\u4e0d\u53ef\u7528", script)
         template = (SCRIPTS_DIR.parent / "assets" / "dashboard" / "templates" / "index.html").read_text(encoding="utf-8")
-        self.assertIn("v='1.5.7'", template)
+        self.assertIn("v='1.5.11'", template)
         self.assertNotIn("skillImproveBtn", template)
+        self.assertNotIn("参考写法", template)
 
     def test_dashboard_button_css_contract(self) -> None:
         styles = (SCRIPTS_DIR.parent / "assets" / "dashboard" / "static" / "styles.css").read_text(encoding="utf-8")
         self.assertIn("inline-size: 36px", styles)
         self.assertIn(".modal-overlay[hidden]", styles)
         self.assertIn("display: none !important", styles)
-        self.assertIn("min-inline-size:64px", styles)
-        self.assertIn("white-space:nowrap", styles)
         self.assertNotIn("width: 32px; height: 32px", styles)
-        self.assertIn("grid-template-columns:minmax(180px,1.1fr) minmax(112px,132px) minmax(280px,2fr) auto", styles)
+        self.assertIn("grid-template-columns:minmax(180px,1.1fr) minmax(112px,132px) minmax(280px,2fr)", styles)
+        self.assertIn(".withdraw-feedback", styles)
+        self.assertNotIn(".delete-action-btn", styles)
         self.assertNotIn(".render-state.unavailable", styles)
         self.assertNotIn("background:#fff6df", styles)
 

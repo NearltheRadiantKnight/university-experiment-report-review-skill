@@ -6,10 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-FEEDBACK_STATUSES={"active","revoked"}
-INTERPRETATION_STATUSES={"drafted","interpreted","needs_clarification","superseded","revoked"}
+FEEDBACK_STATUSES={"active"}
+INTERPRETATION_STATUSES={"drafted","interpreted","needs_clarification","superseded"}
 INTERPRETATION_SCOPES={"report_specific","reusable_skill_rule","personal_preference","needs_clarification",None}
-MODIFICATION_STATUSES={"drafted","needs_revision","validated","applied","revert_drafted","revert_needs_revision","reverted"}
+MODIFICATION_STATUSES={"drafted","needs_revision","validated","applied"}
 
 def now()->str: return datetime.now().astimezone().isoformat(timespec="seconds")
 def _id(prefix:str,*parts:object)->str:
@@ -69,12 +69,12 @@ def upsert_feedback(root:Path,job_id:str,source_name:str|None,action:dict[str,An
  label=str(action.get("label","")).strip()
  feedback_id=_id("fb",job_id,action_id,label)
  path=_feedback_path(root,feedback_id); previous=_read_json(path) or {}
- record={"feedback_id":feedback_id,"job_id":job_id,"source_name":source_name,"action_id":action_id,"label":label,"raw_text":raw_text,"status":"active","created_at":previous.get("created_at") or now(),"updated_at":now(),"revoked_at":None,"revocation_reason":None}
+ record={"feedback_id":feedback_id,"job_id":job_id,"source_name":source_name,"action_id":action_id,"label":label,"raw_text":raw_text,"status":"active","created_at":previous.get("created_at") or now(),"updated_at":now()}
  _write_json(path,record)
  append_event(root,event_type,feedback_id=feedback_id,job_id=job_id)
  interpretation=_blank_interpretation(root,record)
  existing=_read_json(_interpretation_path(root,interpretation["interpretation_id"])) or {}
- if existing.get("raw_text")!=raw_text or existing.get("status") in {None,"revoked","superseded"}:
+ if existing.get("raw_text")!=raw_text or existing.get("status") in {None,"superseded"}:
   interpretation["created_at"]=existing.get("created_at") or interpretation["created_at"]
   _write_json(_interpretation_path(root,interpretation["interpretation_id"]),interpretation)
   append_event(root,"interpretation_drafted",feedback_id=feedback_id,interpretation_id=interpretation["interpretation_id"],job_id=job_id)
@@ -89,49 +89,65 @@ def sync_feedback_payload(root:Path,feedback:dict[str,Any],event_type:str="feedb
    if record: saved.append(record)
  return {"ok":True,"saved":saved,"saved_count":len(saved),"lifecycle_status":"recorded" if saved else "not-needed"}
 
-def _write_revert_modification(root:Path,feedback:dict[str,Any],modification:dict[str,Any],reason:str)->dict[str,Any]:
- modification_id=_id("mod-revert",feedback["feedback_id"],modification.get("modification_id"))
- path=_modification_path(root,modification_id); existing=_read_json(path) or {}
- record={"modification_id":modification_id,"source_feedback_id":feedback["feedback_id"],"interpretation_id":modification.get("interpretation_id"),"status":"revert_drafted","change_type":"revert_skill_rule_update","reason":reason,"target_files":modification.get("target_files",[]),"before_behavior":modification.get("after_behavior"),"after_behavior":modification.get("before_behavior"),"planned_changes":[],"validation_plan":modification.get("validation_plan",[]),"validation_results":[],"validation_blockers":[],"applied_at":None,"installed_at":None,"revert_plan":modification.get("revert_plan"),"created_at":existing.get("created_at") or now(),"updated_at":now(),"reverts_modification_id":modification.get("modification_id")}
- _write_json(path,record); append_event(root,"revert_drafted",feedback_id=feedback["feedback_id"],modification_id=modification_id)
- return record
+def _rewrite_events_without(root:Path,feedback_ids:set[str],modification_ids:set[str])->int:
+ path=events_path(root)
+ if not path.is_file(): return 0
+ kept=[]; removed=0
+ for line in path.read_text(encoding="utf-8-sig").splitlines():
+  if not line.strip(): continue
+  try: event=json.loads(line)
+  except json.JSONDecodeError:
+   kept.append(line); continue
+  if not isinstance(event,dict):
+   kept.append(line); continue
+  feedback_match=str(event.get("feedback_id","") or "") in feedback_ids
+  modification_match=str(event.get("modification_id","") or "") in modification_ids or str(event.get("reverts_modification_id","") or "") in modification_ids
+  if feedback_match or modification_match: removed+=1
+  else: kept.append(json.dumps(event,ensure_ascii=False))
+ if kept: path.write_text("\n".join(kept)+"\n",encoding="utf-8")
+ else: path.unlink(missing_ok=True)
+ return removed
 
-def revoke_feedback(root:Path,feedback_id:str,reason:str="user_revoked")->dict[str,Any]|None:
+def purge_feedback(root:Path,feedback_id:str,reason:str="user_purged")->dict[str,Any]:
+ feedback_ids={str(feedback_id)}; modification_ids=set(); removed={"feedback":0,"interpretations":0,"modifications":0,"events":0}; job_ids=set()
  path=_feedback_path(root,feedback_id); feedback=_read_json(path)
- if not feedback: return None
- if feedback.get("status")!="revoked":
-  feedback["status"]="revoked"; feedback["updated_at"]=now(); feedback["revoked_at"]=now(); feedback["revocation_reason"]=reason; _write_json(path,feedback)
- append_event(root,"feedback_revoked",feedback_id=feedback_id,job_id=feedback.get("job_id"),reason=reason)
+ if feedback and feedback.get("job_id") is not None: job_ids.add(str(feedback.get("job_id")))
+ if path.is_file(): path.unlink(); removed["feedback"]+=1
  for interpretation in list_interpretations(root):
-  if interpretation.get("feedback_id")==feedback_id and interpretation.get("status") in {"drafted","needs_clarification","interpreted"}:
-   interpretation["status"]="revoked"; interpretation["updated_at"]=now(); _write_json(_interpretation_path(root,interpretation["interpretation_id"]),interpretation)
+  if str(interpretation.get("feedback_id")) in feedback_ids:
+   _interpretation_path(root,str(interpretation.get("interpretation_id"))).unlink(missing_ok=True); removed["interpretations"]+=1
  for modification in list_modifications(root):
-  if modification.get("source_feedback_id")==feedback_id and modification.get("status")=="applied":
-   _write_revert_modification(root,feedback,modification,"Source feedback was revoked after this modification was applied.")
- return feedback
+  if str(modification.get("source_feedback_id")) in feedback_ids:
+   modification_id=str(modification.get("modification_id"))
+   modification_ids.add(modification_id)
+   _modification_path(root,modification_id).unlink(missing_ok=True); removed["modifications"]+=1
+ if modification_ids:
+  for modification in list_modifications(root):
+   if str(modification.get("reverts_modification_id")) in modification_ids:
+    modification_id=str(modification.get("modification_id"))
+    modification_ids.add(modification_id)
+    _modification_path(root,modification_id).unlink(missing_ok=True); removed["modifications"]+=1
+ removed["events"]=_rewrite_events_without(root,feedback_ids,modification_ids)
+ return {"ok":True,"purged":removed,"purged_count":sum(removed.values()),"feedback_id":feedback_id,"job_ids":sorted(job_ids),"reason":reason}
 
-def revoke_job_feedback(root:Path,job_id:str,reason:str="user_revoked")->dict[str,Any]:
- revoked=[]
- for feedback in list_feedback(root):
-  if str(feedback.get("job_id"))==str(job_id) and feedback.get("status")=="active":
-   result=revoke_feedback(root,str(feedback["feedback_id"]),reason)
-   if result: revoked.append(result)
- return {"ok":True,"revoked":revoked,"revoked_count":len(revoked)}
-
+def purge_job_feedback(root:Path,job_id:str,reason:str="user_purged")->dict[str,Any]:
+ feedback_ids=[str(feedback["feedback_id"]) for feedback in list_feedback(root) if str(feedback.get("job_id"))==str(job_id)]
+ results=[purge_feedback(root,feedback_id,reason) for feedback_id in feedback_ids]
+ return {"ok":True,"job_id":str(job_id),"purged_feedback_ids":feedback_ids,"purged_count":sum(item.get("purged_count",0) for item in results),"results":results}
 def run_deterministic(root:Path)->dict[str,Any]:
  return {"ok":True,"feedback":len(list_feedback(root)),"interpretations":len(list_interpretations(root)),"modifications":len(list_modifications(root)),"events":len(list_events(root))}
 
 def main()->int:
  parser=argparse.ArgumentParser(); parser.add_argument("--root",type=Path,required=True)
  group=parser.add_mutually_exclusive_group(required=True)
- group.add_argument("--list-feedback",action="store_true"); group.add_argument("--list-interpretations",action="store_true"); group.add_argument("--list-modifications",action="store_true"); group.add_argument("--list-events",action="store_true"); group.add_argument("--run",action="store_true"); group.add_argument("--run-agent"); group.add_argument("--revoke-feedback")
+ group.add_argument("--list-feedback",action="store_true"); group.add_argument("--list-interpretations",action="store_true"); group.add_argument("--list-modifications",action="store_true"); group.add_argument("--list-events",action="store_true"); group.add_argument("--run",action="store_true"); group.add_argument("--run-agent"); group.add_argument("--purge-feedback")
  args=parser.parse_args(); root=args.root.resolve()
  if args.list_feedback: data=list_feedback(root)
  elif args.list_interpretations: data=list_interpretations(root)
  elif args.list_modifications: data=list_modifications(root)
  elif args.list_events: data=list_events(root)
  elif args.run or args.run_agent: data=run_deterministic(root)|({"agent":args.run_agent} if args.run_agent else {})
- elif args.revoke_feedback: data=revoke_feedback(root,args.revoke_feedback) or {"ok":False,"error":"feedback not found"}
+ elif args.purge_feedback: data=purge_feedback(root,args.purge_feedback)
  else: data={}
  print(json.dumps(data,ensure_ascii=False,indent=2)); return 0
 if __name__=="__main__": raise SystemExit(main())

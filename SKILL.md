@@ -195,6 +195,8 @@ Dashboard 根据 `category` 将审阅内容分为两类展示：
 
 两类内容均正常渲染到 DOCX 文档中；此分离仅影响 Dashboard 展示、时间预算和反馈系统。Agent 在生成计划时无需改变，只需正确填写 `category` 字段。
 
+当用户反馈确认某个 Issue 类条目不应作为前端问题继续显示时，不得把它改写为 `praise` 或移动到 Strength 类。应保留原始 `category`、原始 action 元数据和历史反馈记录，只在 Dashboard 展示层根据 active feedback 标记隐藏该 action；清空或删除对应反馈后，该 action 应自动恢复显示。
+
 详细合同见 [references/generated-document-workflow.md](references/generated-document-workflow.md)。
 ## Cross-Agent Contract
 
@@ -221,25 +223,23 @@ Before generation, the plan must pass `scripts/validate_plan.py`:
 Structured additions use `block_type: paragraph | bullets | checklist | table`.
 ## Feedback Continuation
 
-Dashboard feedback uses a four-layer lifecycle instead of directly editing the skill.
+Dashboard feedback uses three layers and never edits skill files directly from the browser.
 
-1. Raw feedback records store the user's exact text with only `active` or `revoked` status.
-2. AI interpretation records structure that text as `report_specific`, `reusable_skill_rule`, `personal_preference`, or `needs_clarification`.
-3. Modification records exist only for reusable skill rules. Their statuses are `drafted`, `needs_revision`, `validated`, `applied`, `revert_drafted`, `revert_needs_revision`, or `reverted`; modification records may not end as failed.
-4. Skill files (`SKILL.md`, references, assets, scripts, dashboard code, tests) change only when an applied modification record has passed validation and installation.
+1. Feedback pool: raw user feedback is stored only while it is still effective. Active feedback keeps the user's exact wording and stable `feedback_id`; empty temporary inputs are local UI state and must not be written.
+2. AI interpretation layer: the next agent run interprets each active feedback item as `report_specific`, `reusable_skill_rule`, `personal_preference`, or `needs_clarification`. This layer resolves vague or inaccurate wording before any rule is applied.
+3. Modification records: create a modification record only when the interpretation says the feedback is a reusable skill rule. Valid statuses are `drafted`, `needs_revision`, `validated`, and `applied`; modification tasks may not end as failed. Skill files (`SKILL.md`, references, assets, scripts, dashboard code, tests) change only after validation and installation.
 
-Saving feedback immediately writes raw feedback, drafts an interpretation record, and appends lifecycle events. Clearing or deleting feedback revokes the raw feedback. If revoked feedback already produced an applied skill modification, the next Agent run must draft and validate a reverse modification instead of silently deleting history.
+Saving feedback writes active raw feedback, drafts an interpretation record, appends lifecycle events, and queues local self-iteration for the next agent run. Later report generation may read only still-present active feedback and applied modification records. Purged records, old metadata, and old events must not be used as rule evidence.
 
-Applying a reusable feedback rule to the skill must never consume, blank, or hide the original feedback. Historical feedback remains visible with its raw text, interpretation scope, modification id, and current status such as `interpreted`, `applied`, or `reverted`. When a follow-up report job is generated from feedback, preserve or carry forward the relevant lifecycle records so the Dashboard history still explains which feedback affected the result.
+Withdrawing feedback is an irreversible purge. The Dashboard must remove the raw feedback, interpretation records, modification records, matching lifecycle events, and any matching action in the job's `*.feedback.json`; `/api/feedback` and history UI must not return revoked/reverted placeholders. If the feedback already changed a skill file or script, the agent must first remove or reverse the actual skill effect, validate the result, and only then purge local lifecycle JSON. Do not leave "record removed but rule still active" behavior behind.
 
-History actions must operate by stable `feedback_id`, not by the original report job metadata. A migrated or follow-up Dashboard may no longer contain the old job's metadata file, but clearing or deleting historical feedback must still revoke the raw feedback and draft any required revert modification.
+History actions operate by stable `feedback_id`, not by the original report job metadata. A migrated or follow-up Dashboard may no longer contain the old job metadata file, but withdrawing historical feedback must still purge the lifecycle records and matching flat feedback action. Repeating the same withdrawal is idempotent and must not produce a 500.
 
-Dashboard code performs only deterministic local steps. Any AI interpretation, skill-file edit, validation repair, install, or revert happens during the next Agent run, which must scan `feedback-lifecycle/events.jsonl` and continue automatically until it reaches a user-confirmation boundary or completes the lifecycle.
+Dashboard code performs only deterministic local file operations and does not call external APIs. AI interpretation, skill-file edits, validation repair, installation, and effect reversal happen during the next agent run, which must scan active local feedback and continue automatically until it reaches a user-confirmation boundary or completes the lifecycle.
 
 Personal memory remains separate in `personal-memory.json`; treat it as stable user-provided context, not evidence that a specific report already contains the information.
 
 Report-specific feedback still creates a new immutable report job rather than overwriting an old report.
-
 ## Render Status Contract
 
 - `not-run`: gray; offer “开始渲染”. It means no render result exists, not that the DOCX is broken.
