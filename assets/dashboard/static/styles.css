@@ -306,3 +306,28 @@ footer { padding: 24px 0 40px; border-top: 1px solid rgba(23, 50, 77, .16); colo
 
 .feedback-lifecycle-state{display:inline-flex;justify-content:center;align-items:center;min-height:32px;padding:4px 8px;border-radius:999px;background:#eef4fa;color:#24557d;font-size:12px;font-weight:800}
 
+.memory-panel textarea.memory-notes {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  box-sizing: border-box;
+  border: 1px solid #cfd6da;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  background: white;
+  color: var(--ink);
+}
+
+/* ── Strengths section ── */
+.strengths-section{margin-top:24px}
+.strengths-section h3{color:var(--navy);font-size:15px;margin:0 0 12px}
+.strengths-grid{display:grid;gap:12px}
+.strength-card{border:1px solid var(--line);border-left:5px solid var(--purple);border-radius:12px;padding:14px;background:#fff}
+.strength-card.example{border-left-color:var(--green)}
+.strength-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.strength-badge{display:inline-flex;padding:4px 10px;border-radius:999px;background:#f0ecf5;color:var(--purple);font-size:12px;font-weight:800}
+.strength-card.example .strength-badge{background:#e8f2e4;color:var(--green)}
+.strength-card p{margin:0;color:var(--ink);line-height:1.65;font-size:14px}

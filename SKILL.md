@@ -176,6 +176,25 @@ Windows Codex Desktop 默认禁止探测 Word COM，也不要调用会启动 `co
 
 流水线先校验计划，再生成一份保留原格式的彩色批注 DOCX；红绿灯、预算内行动、伪完成、污染检查、截图重拍指令和自动质量检查统一写入文末综合附录。质量 JSON、渲染 PDF 和预览图只作为本地机器数据，不进入普通下载区。随后启动 `127.0.0.1:8765` 渐进式工作台并打开浏览器。不得覆盖原始 DOCX。
 
+### Category: Issue vs. Strength 分类说明
+
+Dashboard 根据 `category` 将审阅内容分为两类展示：
+
+- **Issue 类**（进入"现在优先做这些"、时间预算、修改统计、反馈框）：
+  - `guidance`（执行指导）、`suggestion`（修改建议）—— 蓝色 #2F75B5
+  - `writing`（写作改进）—— 蓝色 #2F75B5
+  - `evidence`（证据要求）—— 蓝色系 #008C95
+  - `issue`（发现问题）—— 红色 #C00000
+  - `warning`（注意事项）—— 橙色 #C65911
+
+- **Strength 类**（仅显示在"保留优点与参考写法"区域，不参与修改相关统计）：
+  - `praise`（保留优点）—— 紫色 #8064A2
+  - `example`（参考写法）—— 绿色 #548235
+
+- `summary`（总结 #44546A）为信息性内容，不在两组中出现。
+
+两类内容均正常渲染到 DOCX 文档中；此分离仅影响 Dashboard 展示、时间预算和反馈系统。Agent 在生成计划时无需改变，只需正确填写 `category` 字段。
+
 详细合同见 [references/generated-document-workflow.md](references/generated-document-workflow.md)。
 ## Cross-Agent Contract
 

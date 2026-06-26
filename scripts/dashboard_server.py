@@ -57,7 +57,7 @@ def _public_record(record:dict[str,Any],output_dir:Path)->dict[str,Any]:
   try: candidate.relative_to(output_dir.resolve())
   except ValueError: candidate=None
   if candidate and candidate.is_file(): public_quality["preview_url"]=f"/api/reports/{record.get('job_id','')}/render-preview"
- return {key:record.get(key) for key in ("job_id","report_kind","report_label","source_state","source_name","generated_name","created_at","summary","verdict","submission_signal","time_budget","estimated_minutes","priority_counts","actions","false_completion_findings","contamination_findings")}|{
+ return {key:record.get(key) for key in ("job_id","report_kind","report_label","source_state","source_name","generated_name","created_at","summary","verdict","submission_signal","time_budget","estimated_minutes","priority_counts","actions","strengths","false_completion_findings","contamination_findings")}|{
   "files":files,"screenshots":screenshots,"quality":public_quality}
 
 def _metadata_records(output_dir:Path)->list[dict[str,Any]]:

@@ -19,14 +19,19 @@ SKILL_NAME="university-experiment-report-review-skill"
 VERSION="1.5.0"
 DEFAULT_FONT="Microsoft YaHei"
 CATEGORY_STYLES={
- "guidance":("2F75B5","执行指导"),"evidence":("008C95","证据要求"),"writing":("7030A0","写作建议"),
- "warning":("C65911","注意事项"),"issue":("C00000","发现问题"),"suggestion":("1F4E79","修改建议"),
- "example":("548235","参考写法"),"praise":("8064A2","保留优点"),"summary":("44546A","总结")}
+ "guidance":("2F75B5","执行指导"),"evidence":("008C95","证据要求"),
+ "writing":("2F75B5","写作改进"),
+ "warning":("C65911","注意事项"),"issue":("C00000","发现问题"),
+ "suggestion":("1F4E79","修改建议"),
+ "example":("548235","参考写法"),"praise":("8064A2","保留优点"),
+ "summary":("44546A","总结")}
 PRIORITY_LABELS={"blocker":"阻塞","high":"高","medium":"中","low":"低","optional":"可选"}
 PRIORITY_ORDER={"blocker":0,"high":1,"medium":2,"low":3,"optional":4}
 DEFAULT_MINUTES={"blocker":15,"high":15,"medium":10,"low":5,"optional":5}
 BUDGET_LIMITS={"15m":15,"1h":60,"half_day":240,"full":None}
 SIGNAL_LABELS={"green":"绿灯 · 可以提交","yellow":"黄灯 · 小修后提交","red":"红灯 · 暂不建议提交"}
+ISSUE_CATEGORIES={"issue","warning","suggestion","guidance","evidence","writing"}
+STRENGTH_CATEGORIES={"praise","example"}
 
 class ReportBuildError(RuntimeError): pass
 
@@ -238,11 +243,16 @@ def build_report(source:Path,plan_path:Path,output_dir:Path)->tuple[Path,Path]:
  report_label="实验执行报告" if plan["report_kind"]=="execution" else "修改报告"
  output_path=_unique_path(output_dir/f"{_safe_stem(source.stem)}-{report_label}.docx",job_id); document.save(output_path)
  generated_files=[{"kind":"annotated","label":report_label,"name":output_path.name,"sha256":_sha256(output_path)}]
- counts=Counter(str(item.get("priority","medium")) for item in selected_additions); actions=[]
- for item in selected_additions[:5]:
-  category=str(item.get("category","suggestion")); priority=str(item.get("priority","medium")); default=CATEGORY_STYLES.get(category,CATEGORY_STYLES["suggestion"])[1]
-  actions.append({"label":str(item.get("label",default)),"priority":priority,"priority_label":PRIORITY_LABELS.get(priority,"中"),"category":category,"evidence_basis":str(item.get("evidence_basis","unverified")),"estimated_minutes":_estimated_minutes(item),"text":_addition_plain_text(item)[:500]})
- metadata={"job_id":job_id,"skill":SKILL_NAME,"version":VERSION,"created_at":datetime.now().astimezone().isoformat(timespec="seconds"),"report_kind":plan["report_kind"],"report_label":report_label,"source_state":plan["source_state"],"source_name":source.name,"domain_profile":plan.get("domain_profile"),"domain_confidence":plan.get("domain_confidence"),"domain_profile_basis":plan.get("domain_profile_basis"),"source_sha256":_sha256(source),"generated_name":output_path.name,"generated_sha256":_sha256(output_path),"generated_files":generated_files,"summary":str(plan.get("summary","")).strip(),"verdict":str(plan.get("verdict","")).strip(),"submission_signal":plan.get("submission_signal") or ("red" if plan.get("source_state")=="blank" else "yellow"),"time_budget":plan.get("time_budget","full"),"review_depth":plan.get("review_depth","standard"),"review_focus":plan.get("review_focus","comprehensive"),"output_mode":plan.get("output_mode","single_docx"),"estimated_minutes":sum(_estimated_minutes(item) for item in selected_additions),"addition_count":len(selected_additions),"priority_counts":dict(counts),"actions":actions,"false_completion_findings":plan.get("false_completion_findings",[]),"contamination_findings":plan.get("contamination_findings",[]),"screenshot_evidence":screenshots,"plan_warnings":warnings,"applied":applied,"style_policy":{"original_content":"preserved","generated_content":"structured, labeled, and category-colored"},"local_only":True}
+ issue_additions=[item for item in selected_additions if str(item.get("category","suggestion")) in ISSUE_CATEGORIES]
+ strength_additions=[item for item in selected_additions if str(item.get("category","suggestion")) in STRENGTH_CATEGORIES]
+ counts=Counter(str(item.get("priority","medium")) for item in issue_additions); actions=[]; strengths=[]
+ for item in issue_additions[:5]:
+  category=str(item.get("category","suggestion")); priority=str(item.get("priority","medium")); _hex,default_label=CATEGORY_STYLES.get(category,CATEGORY_STYLES["suggestion"])
+  actions.append({"label":str(item.get("label",default_label)),"priority":priority,"priority_label":PRIORITY_LABELS.get(priority,"中"),"category":category,"evidence_basis":str(item.get("evidence_basis","unverified")),"estimated_minutes":_estimated_minutes(item),"text":_addition_plain_text(item)[:500]})
+ for item in strength_additions[:5]:
+  category=str(item.get("category","praise")); _hex,default_label=CATEGORY_STYLES.get(category,CATEGORY_STYLES["praise"])
+  strengths.append({"label":str(item.get("label",default_label)),"category":category,"text":_addition_plain_text(item)[:500]})
+ metadata={"job_id":job_id,"skill":SKILL_NAME,"version":VERSION,"created_at":datetime.now().astimezone().isoformat(timespec="seconds"),"report_kind":plan["report_kind"],"report_label":report_label,"source_state":plan["source_state"],"source_name":source.name,"domain_profile":plan.get("domain_profile"),"domain_confidence":plan.get("domain_confidence"),"domain_profile_basis":plan.get("domain_profile_basis"),"source_sha256":_sha256(source),"generated_name":output_path.name,"generated_sha256":_sha256(output_path),"generated_files":generated_files,"summary":str(plan.get("summary","")).strip(),"verdict":str(plan.get("verdict","")).strip(),"submission_signal":plan.get("submission_signal") or ("red" if plan.get("source_state")=="blank" else "yellow"),"time_budget":plan.get("time_budget","full"),"review_depth":plan.get("review_depth","standard"),"review_focus":plan.get("review_focus","comprehensive"),"output_mode":plan.get("output_mode","single_docx"),"estimated_minutes":sum(_estimated_minutes(item) for item in issue_additions),"addition_count":len(selected_additions),"priority_counts":dict(counts),"actions":actions,"strengths":strengths,"false_completion_findings":plan.get("false_completion_findings",[]),"contamination_findings":plan.get("contamination_findings",[]),"screenshot_evidence":screenshots,"plan_warnings":warnings,"applied":applied,"style_policy":{"original_content":"preserved","generated_content":"structured, labeled, and category-colored"},"local_only":True}
  metadata_path=output_dir/f"{job_id}.metadata.json"; metadata_path.write_text(json.dumps(metadata,ensure_ascii=False,indent=2),encoding="utf-8")
  return output_path,metadata_path
 def diagnostics()->dict[str,Any]:
