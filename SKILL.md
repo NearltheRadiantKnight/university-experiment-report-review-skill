@@ -45,6 +45,28 @@ metadata: {"author":"Codex","version":"1.5.7","created":"2026-06-23","last_revie
 7. 反馈服务于学习和真实实验，不替学生伪造未执行的实验。
 8. 不要对一般教育问题自动启用；应等待明确的实验报告相关请求或显式调用。
 
+## Input-to-Output Control Flow
+
+Use one canonical data directory for normal runs: `<skill>/outputs/dashboard` (resolved by `scripts/output_paths.py`). All generated DOCX files, `manifest.json`, `document.txt`, images, `generation-plan.json`, metadata, quality JSON, feedback lifecycle JSON, personal memory, preferences, and `dashboard-url.txt` must live under that directory. Do not create ad hoc `analysis-*` directories during normal use; custom output directories are allowed only for tests, CI, or explicit maintenance with `--allow-custom-output-dir`.
+
+Follow this control flow from user input to output:
+
+1. Classify input before running scripts.
+   - Local `.docx`: may enter the full inspect -> confirm -> plan -> validate -> pipeline -> Dashboard path.
+   - Local `.pdf`, image, text, or Markdown: may enter inspect and guidance analysis, but must not claim editable DOCX generation with preserved original formatting. Ask for/require local DOCX conversion before `run_pipeline.py`.
+   - No accessible local path: use only the current conversation's visible document/visual context and do not run file scripts.
+   - User only asks about usage, process, or feedback semantics: answer directly and do not start inspection, generation, or Dashboard.
+2. Inspect once into the canonical output directory with `inspect_report.py`; reuse that directory for the rest of the turn unless the source file changes or the user explicitly asks to reset it.
+3. Read active local context from the same directory: `manifest.json`, `document.txt`, extracted images, `personal-memory.json`, `generation-preferences.json`, active feedback pool, and applied reusable modifications. Ignore purged feedback, old metadata residue, and other output directories.
+4. Decide source state and output mode. If the user requests DOCX output but the source is not DOCX, stop at guidance and state the blocked edge instead of trying a lossy conversion path.
+5. Ask for explicit user confirmation before generation. The confirmation message must summarize time budget, review depth, review focus, output mode, fixed output directory, whether DOCX will be generated, and the source-state decision. Dashboard saved settings are preferences only and do not count as confirmation for the current run. Treat only an in-conversation user reply such as "确认执行", "按默认生成", "直接生成", or an equivalent explicit go-ahead as `user-confirmed`.
+6. Write `generation-plan.json` into the canonical output directory only after `user-confirmed`.
+7. Validate the plan with `scripts/validate_plan.py`. If validation fails, revise the plan; do not run `run_pipeline.py` on an invalid plan.
+8. Run `run_pipeline.py` only for a validated plan and DOCX source. It must use the same canonical output directory and then launch Dashboard against that directory.
+9. Final response must name the actual output directory, generated DOCX path when present, Dashboard URL, and any control-flow stop reason when a path was intentionally not taken.
+
+Blocked edges save time: PDF/image/text input never enters preserved-format DOCX generation; missing local files never enter local inspection; missing user confirmation never writes `generation-plan.json`; invalid plans never enter pipeline; purged feedback never enters future judgment; Dashboard never points at a different directory than the current output directory.
+
 ## Core Workflow
 
 ### 1. 收集评价依据
@@ -56,7 +78,7 @@ metadata: {"author":"Codex","version":"1.5.7","created":"2026-06-23","last_revie
 对于可访问的本地文件，优先运行一个准备命令：
 
 ```powershell
-python scripts/inspect_report.py --input "<报告路径>" --output-dir "<本地临时目录>"
+python scripts/inspect_report.py --input "<报告路径>"
 ```
 
 读取生成的 `manifest.json` 和 `document.txt`。然后逐一查看 `images/` 中与结果、步骤、报错或结论有关的图片；PDF 还应抽查或查看导出的页面图。不要把提取脚本的输出当作最终审阅，它只负责本地整理材料。
@@ -128,14 +150,16 @@ python scripts/domain_router.py --input "<准备目录>/document.txt"
 
 ### 6.5 生成前确认框架
 
-在写 Generation Plan 前，Agent 与 Dashboard 都应提供并确认四项设置：
+在写 Generation Plan 前，Agent 必须在对话中向用户确认本次生成；Dashboard 只保存偏好，不等于本次确认。确认内容至少包括四项设置：
 
 - `time_budget`: `15m`、`1h`、`half_day` 或 `full`。
 - `review_depth`: `quick`、`standard` 或 `deep`。
 - `review_focus`: `comprehensive`、`screenshots`、`correctness` 或 `writing`。
 - `output_mode`: `single_docx` 或 `guidance_only`。
+- 固定输出目录：`<skill>/outputs/dashboard`。
+- 报告状态判断：空白、部分完成或已完成；以及是否生成 DOCX。
 
-如果输出目录存在 `generation-preferences.json`，先读取它，再在对话中向用户简短确认；用户在当前对话中的明确要求优先。非交互环境使用 `full + standard + comprehensive + single_docx`。预算模式最多保留五项影响最大的动作，并为每项填写 `estimated_minutes`。`guidance_only` 只返回执行/修改计划，不运行 DOCX 流水线。
+如果输出目录存在 `generation-preferences.json`，先读取它，再在对话中向用户简短确认；用户在当前对话中的明确要求优先。只有用户在对话中明确回复“确认执行”“按默认生成”“直接生成”等等价授权后，才可以写 `generation-plan.json`、运行 `run_pipeline.py` 或启动本次结果 Dashboard。非交互环境使用 `full + standard + comprehensive + single_docx`，但仍须在运行记录中标明使用了非交互默认确认。预算模式最多保留五项影响最大的动作，并为每项填写 `estimated_minutes`。`guidance_only` 只返回执行/修改计划，不运行 DOCX 流水线。
 
 同时确定红绿灯提交状态：`green` 表示可以提交，`yellow` 表示小修后提交，`red` 表示证据或核心任务不足。检查 `manifest.json` 中的 `review_signals`，但只能把它视为候选信号；当前 Agent 必须结合全文和实际截图复核伪完成、占位符、AI 对话痕迹、重复章节和敏感信息。
 ### 7. 生成可下载文档
@@ -150,7 +174,7 @@ python scripts/domain_router.py --input "<准备目录>/document.txt"
 把计划保存为本地 UTF-8 JSON 后，只运行一个交付命令：
 
 ```powershell
-python scripts/run_pipeline.py --source “<原始报告.docx>” --plan “<generation-plan.json>” --output-dir “<本地输出目录>”
+python scripts/run_pipeline.py --source "<原始报告.docx>" --plan "<outputs/dashboard/generation-plan.json>"
 # 必须通过页面渲染时追加 --require-render；自动化测试可用 --no-dashboard
 ```
 
@@ -164,7 +188,7 @@ python scripts/run_pipeline.py --source “<原始报告.docx>” --plan “<gen
 - 若为 `output_mode: guidance_only`（仅返回执行/修改计划，不生成 DOCX），则单独启动 Dashboard：
 
   ```powershell
-  python scripts/dashboard_server.py --output-dir “<输出目录>” [--port 8765]
+  python scripts/dashboard_server.py [--port 8765]
   ```
 
 - Dashboard 绑定 `127.0.0.1`，默认端口 `8765`；端口冲突时自动选择下一个可用端口，或指定 `--port`。
@@ -297,7 +321,7 @@ ot-installed`; only `passed` is a real CLI smoke pass. Never report Claude Code 
 
 空白模板应把“修改方案”改为“实验执行与写作方案”。如果报告已经足够好，最优先处理可写“无必须修改项”，然后给出最多三项可选润色。
 
-完成文档生成后，还应在回复末尾给出：生成文件绝对路径、报告类型、领域选择及置信度、结构质量状态、页面渲染状态、Dashboard 本地 URL、反馈 JSON 用法、原文样式保留说明，以及“新增内容用异色字体并带标签”的说明。
+完成文档生成后，还应在回复末尾给出：固定输出目录、生成文件绝对路径、报告类型、领域选择及置信度、结构质量状态、页面渲染状态、Dashboard 本地 URL、反馈 JSON 用法、原文样式保留说明，以及“新增内容用异色字体并带标签”的说明。
 ## Failure Handling
 
 - 文档无法打开：说明格式或权限问题，建议在本地另存为 `.docx` 或 `.pdf`，不要猜测内容。

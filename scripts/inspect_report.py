@@ -399,7 +399,8 @@ def main() -> int:
     """Parse CLI arguments and prepare one report for agent review."""
     parser = argparse.ArgumentParser(description="Prepare a university experiment report for local agent review.")
     parser.add_argument("--input", type=Path, help="Path to a DOCX, PDF, text, Markdown, or image file.")
-    parser.add_argument("--output-dir", type=Path, help="Directory for manifest, extracted text, and images.")
+    parser.add_argument("--output-dir", type=Path, help="Directory for manifest, extracted text, and images. Defaults to the canonical dashboard output directory.")
+    parser.add_argument("--allow-custom-output-dir", action="store_true", help="Allow a non-canonical output directory for tests, CI, or explicit maintenance.")
     parser.add_argument("--max-pages", type=int, default=80, help="Maximum PDF pages to render (1-500).")
     parser.add_argument("--check-prereqs", action="store_true", help="Report local prerequisites as JSON.")
     parser.add_argument("--diagnostics", action="store_true", help="Report harness metadata as JSON.")
@@ -411,16 +412,17 @@ def main() -> int:
     if args.diagnostics:
         print(json.dumps(diagnostics(), ensure_ascii=False, indent=2))
         return 0
-    if args.input is None or args.output_dir is None:
+    if args.input is None:
         _structured_error(
-            "--input and --output-dir are required for report preparation.",
+            "--input is required for report preparation.",
             "validation",
-            "Provide both paths, or use --check-prereqs/--diagnostics.",
+            "Provide an input path, or use --check-prereqs/--diagnostics.",
         )
         return 1
 
     try:
-        manifest_path = prepare_report(args.input.resolve(), args.output_dir.resolve(), args.max_pages)
+        output_dir = resolve_output_dir(args.output_dir, allow_custom=args.allow_custom_output_dir)
+        manifest_path = prepare_report(args.input.resolve(), output_dir, args.max_pages)
     except ValueError as exc:
         _structured_error(str(exc), "validation", "Check the file path, extension, and numeric limits.")
         return 1

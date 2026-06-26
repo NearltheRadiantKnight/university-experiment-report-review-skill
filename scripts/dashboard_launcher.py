@@ -15,6 +15,7 @@ import urllib.error
 import urllib.request
 import webbrowser
 from pathlib import Path
+from output_paths import resolve_output_dir
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVER_SCRIPT = ROOT / "scripts" / "dashboard_server.py"
@@ -113,12 +114,14 @@ def launch_dashboard(output_dir: Path, port: int = 8765, open_browser: bool = Tr
 def main() -> int:
     """Launch the local dashboard and print its URL as JSON."""
     parser = argparse.ArgumentParser(description="Launch the local report download dashboard.")
-    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path)
+    parser.add_argument("--allow-custom-output-dir", action="store_true", help="Allow a non-canonical output directory for tests, CI, or explicit maintenance.")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-open", action="store_true", help="Start without opening a browser.")
     args = parser.parse_args()
     try:
-        url = launch_dashboard(args.output_dir, args.port, not args.no_open)
+        output_dir = resolve_output_dir(args.output_dir, allow_custom=args.allow_custom_output_dir)
+        url = launch_dashboard(output_dir, args.port, not args.no_open)
     except (ValueError, RuntimeError, OSError) as exc:
         print(
             json.dumps(

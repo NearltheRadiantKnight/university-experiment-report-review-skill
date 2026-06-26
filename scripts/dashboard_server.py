@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from flask import Flask,abort,jsonify,render_template,request,send_file
 from feedback_lifecycle import list_events,list_feedback,list_interpretations,list_modifications,purge_feedback,purge_job_feedback,sync_feedback_payload
+from output_paths import resolve_output_dir
 from qa_report import render_report
 ROOT=Path(__file__).resolve().parents[1]; TEMPLATE_DIR=ROOT/"assets"/"dashboard"/"templates"; STATIC_DIR=ROOT/"assets"/"dashboard"/"static"
 DASHBOARD_API_VERSION=4
@@ -408,7 +409,7 @@ def create_app(output_dir:Path)->Flask:
  return app
 
 def main()->int:
- parser=argparse.ArgumentParser(); parser.add_argument("--output-dir",type=Path,required=True); parser.add_argument("--port",type=int,default=8765); args=parser.parse_args()
+ parser=argparse.ArgumentParser(); parser.add_argument("--output-dir",type=Path); parser.add_argument("--allow-custom-output-dir",action="store_true",help="Allow a non-canonical output directory for tests, CI, or explicit maintenance."); parser.add_argument("--port",type=int,default=8765); args=parser.parse_args()
  if args.port<1024 or args.port>65535: parser.error("--port must be between 1024 and 65535")
- create_app(args.output_dir).run(host="127.0.0.1",port=args.port,debug=False,use_reloader=False); return 0
+ output_dir=resolve_output_dir(args.output_dir,allow_custom=args.allow_custom_output_dir); create_app(output_dir).run(host="127.0.0.1",port=args.port,debug=False,use_reloader=False); return 0
 if __name__=="__main__": raise SystemExit(main())

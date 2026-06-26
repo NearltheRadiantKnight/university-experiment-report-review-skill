@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from build_report import ReportBuildError,build_report
 from dashboard_launcher import launch_dashboard
+from output_paths import resolve_output_dir
 from qa_report import ReportQualityError,check_report
 
 def run_pipeline(source:Path,plan:Path,output_dir:Path,port:int=8765,open_browser:bool=True,launch_dashboard_server:bool=True,require_render:bool=False)->dict[str,Any]:
@@ -20,10 +21,12 @@ def run_pipeline(source:Path,plan:Path,output_dir:Path,port:int=8765,open_browse
 
 def main()->int:
  parser=argparse.ArgumentParser(description="Generate, quality-check, and publish report deliverables.")
- parser.add_argument("--source",type=Path,required=True); parser.add_argument("--plan",type=Path,required=True); parser.add_argument("--output-dir",type=Path,required=True)
- parser.add_argument("--port",type=int,default=8765); parser.add_argument("--no-open",action="store_true"); parser.add_argument("--no-dashboard",action="store_true"); parser.add_argument("--require-render",action="store_true"); parser.add_argument("--allow-word-com",action="store_true",help="Opt in to Microsoft Word COM rendering; may trigger Windows sandbox prompts."); args=parser.parse_args()
+ parser.add_argument("--source",type=Path,required=True); parser.add_argument("--plan",type=Path,required=True); parser.add_argument("--output-dir",type=Path)
+ parser.add_argument("--port",type=int,default=8765); parser.add_argument("--no-open",action="store_true"); parser.add_argument("--no-dashboard",action="store_true"); parser.add_argument("--require-render",action="store_true"); parser.add_argument("--allow-word-com",action="store_true",help="Opt in to Microsoft Word COM rendering; may trigger Windows sandbox prompts."); parser.add_argument("--allow-custom-output-dir",action="store_true",help="Allow a non-canonical output directory for tests, CI, or explicit maintenance."); args=parser.parse_args()
  if args.allow_word_com: os.environ["EXPERIMENT_REPORT_ALLOW_WORD_COM"]="1"
- try: result=run_pipeline(args.source.resolve(),args.plan.resolve(),args.output_dir.resolve(),args.port,not args.no_open,not args.no_dashboard,args.require_render)
+ try:
+  output_dir=resolve_output_dir(args.output_dir,allow_custom=args.allow_custom_output_dir)
+  result=run_pipeline(args.source.resolve(),args.plan.resolve(),output_dir,args.port,not args.no_open,not args.no_dashboard,args.require_render)
  except (ValueError,ReportBuildError,ReportQualityError,RuntimeError,OSError) as exc:
   print(json.dumps({"error":str(exc),"error_type":"runtime","hint":"Check source, plan gates, anchors, renderer, output path, and port."},ensure_ascii=False),file=sys.stderr); return 1
  print(json.dumps(result,ensure_ascii=False,indent=2)); return 0
